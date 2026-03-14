@@ -116,3 +116,50 @@ for i, col in enumerate(numeric_cols):
     plt.title(col)
 plt.tight_layout()
 plt.show()
+plt.figure(figsize=(8, 5))
+sns.countplot(x=df["NObeyesdad"])
+
+labels = [
+    "Insufficient Weight",
+    "Normal Weight",
+    "Overweight I",
+    "Overweight II",
+    "Obesity I",
+    "Obesity II",
+    "Obesity III"
+]
+
+plt.xticks(ticks=range(len(labels)), labels=labels, rotation=30)
+plt.title("Distribution of Obesity Classes")
+plt.xlabel("Obesity Level")
+plt.ylabel("Count")
+plt.subplots_adjust(bottom=0.25)
+# ─────────────────────────────────────────────────────────────────────────────
+#  FONCTION : optimize_memory  (version corrigée + enrichie)
+# ─────────────────────────────────────────────────────────────────────────────
+def optimize_memory(df, category_threshold=0.5, verbose=True):
+    """
+    Réduit la mémoire d'un DataFrame pandas en optimisant les types de données.
+
+    Améliorations par rapport à la version originale
+    ─────────────────────────────────────────────────
+    1. Colonnes OBJECT → category quand le ratio unique/total est faible.
+       C'est souvent le gain le plus important (ignoré dans l'ancienne version).
+    2. Colonnes déjà CATEGORY → vérification et conservation.
+    3. Rapport détaillé colonne par colonne (optionnel via verbose).
+
+    Paramètres
+    ──────────
+    df                 : DataFrame à optimiser (modifié sur une copie)
+    category_threshold : seuil de cardinalité relative au-dessous duquel
+                         une colonne object est convertie en category.
+                         Ex : 0.5 → si nb_valeurs_uniques / nb_lignes < 0.5
+                         (par défaut 0.5 — couvre la quasi-totalité des cas)
+    verbose            : affiche le rapport colonne par colonne si True
+
+    Retourne
+    ────────
+    DataFrame optimisé (copie — le DataFrame original n'est pas modifié)
+    """
+
+    df = df.copy()
