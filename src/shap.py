@@ -86,4 +86,41 @@ def generate_shap_plots():
     plt.savefig(path2, bbox_inches='tight', dpi=150)
     plt.close()
     print(f"✅ Sauvegardé → {path2}")
+# ── Explication par patient (appelé depuis app.py) ────────────────────────────
+def explain_patient(X_patient, feature_names):
+    """
+    Calcule les SHAP values pour UN patient.
+
+    Args:
+        X_patient     : array (1, n_features) — valeurs du patient
+        feature_names : list — noms des features (X.columns)
+
+    Returns:
+        pred_label : int — classe prédite
+        shap_df    : DataFrame trié par importance SHAP
+    """
+    model = joblib.load(MODEL_PATH)
+
+    pred_label = model.predict(X_patient)[0]
+
+    explainer = shap.TreeExplainer(model)
+    shap_vals = explainer.shap_values(X_patient)
+
+    # Récupérer les SHAP values pour la classe prédite
+    if isinstance(shap_vals, list):
+        sv = shap_vals[pred_label][0]
+    else:
+        sv = shap_vals[0]
+
+    shap_df = (
+        pd.DataFrame({'Feature': feature_names, 'SHAP Value': sv})
+        .assign(Abs=lambda x: x['SHAP Value'].abs())
+        .sort_values('Abs', ascending=False)
+        .drop(columns='Abs')
+        .reset_index(drop=True)
+    )
+
+    return pred_label, shap_df
+
+
 
