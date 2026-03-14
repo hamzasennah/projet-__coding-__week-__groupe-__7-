@@ -495,8 +495,8 @@ MTRANS_MAP = {"Automobile":0,"Vélo":1,"Moto":2,"Transport en commun":3,"Marche"
 ROLES       = ["👩‍⚕️  Infirmière — Saisie Patient","👨‍⚕️  Médecin — Analyse & Diagnostic"]
 NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique"]
 DOC_PAGES   = ["🏥  Tableau de Bord","📊  Exploration Clinique",
-               "📈  Analyse Statistique"
-               ]
+               "📈  Analyse Statistique",
+               "⚖️  Comparaison des Modèles","🩺  Diagnostic IA"]
 PALETTE     = ["#0ea5e9","#6366f1","#10b981","#f59e0b","#f43f5e","#8b5cf6","#f97316","#14b8a6"]
 
 
@@ -943,174 +943,150 @@ elif is_nurse and page == NURSE_PAGES[1]:
 # ╔═══════════════════════════════════════════════════════════╗
 #  DOCTOR PAGE 1 — Tableau de Bord
 # ╚═══════════════════════════════════════════════════════════╝
-# ╔═══════════════════════════════════════════════════════════╗
-#  DOCTOR PAGE 1 — Tableau de Bord Simplifié
-# ╚═══════════════════════════════════════════════════════════╝
 elif is_doc and page == DOC_PAGES[0]:
     st.markdown("""
     <div class='banner banner-doctor'>
         <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-title'>Tableau de Bord - Compteur Patients</div>
-        <div class='banner-sub'>Gestion simple du flux de patients dans la clinique</div>
-        <span class='banner-badge'>compteur</span>
-        <span class='banner-badge'>flux-patients</span>
+        <div class='banner-title'>Tableau de Bord — Salle d'Attente</div>
+        <div class='banner-sub'>Gestion en temps réel des patients présents dans la clinique</div>
+        <span class='banner-badge'>gestion-flux</span>
+        <span class='banner-badge'>temps-réel</span>
+        <span class='banner-badge'>groupe-7</span>
     </div>""", unsafe_allow_html=True)
 
-    # Initialisation du compteur
-    if 'patient_counter' not in st.session_state:
-        st.session_state.patient_counter = 0
+    n_wait = st.session_state["waiting"]
+    if n_wait == 0:      ws_cls,ws_txt,ws_icon = "ws-low",  "Salle vide",       "🟢"
+    elif n_wait <= 3:    ws_cls,ws_txt,ws_icon = "ws-low",  "Flux normal",       "🟢"
+    elif n_wait <= 8:    ws_cls,ws_txt,ws_icon = "ws-mid",  "Attente modérée",   "🟡"
+    else:                ws_cls,ws_txt,ws_icon = "ws-high", "Salle chargée",     "🔴"
 
-    # Affichage du compteur principal
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown(f"""
-        <div style='background:linear-gradient(160deg,#0d1a2e,#132237);
-                    border:2px solid #0ea5e9;
-                    border-radius:30px;
-                    padding:3rem 2rem;
-                    text-align:center;
-                    margin:1rem 0 2rem 0;
-                    box-shadow:0 20px 40px rgba(14,165,233,0.2)'>
-            <div style='font-size:.8rem;font-weight:700;letter-spacing:.15em;
-                        text-transform:uppercase;color:#4a6080;margin-bottom:1rem'>
-                Patients en consultation
-            </div>
-            <div style='font-family:"Playfair Display",serif;font-size:7rem;
-                        font-weight:800;color:#e8f4ff;line-height:1;
-                        text-shadow:0 0 30px rgba(14,165,233,0.5)'>
-                {st.session_state.patient_counter}
-            </div>
+    # ── Compteur principal centré ──
+    st.markdown(f"""
+    <div style='display:flex;justify-content:center;margin:2rem 0 1.5rem'>
+        <div style='background:linear-gradient(160deg,#071a38,#0d2548);
+                    border:1px solid rgba(14,165,233,.3);border-radius:24px;
+                    padding:3rem 5rem;text-align:center;
+                    box-shadow:0 12px 48px rgba(0,0,0,.6);min-width:320px'>
+            <div style='font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+                        color:#3a5a7a;margin-bottom:.8rem'>Patients en salle d'attente</div>
+            <div style='font-family:"Playfair Display",serif;font-size:6rem;
+                        color:#e8f4ff;line-height:1;font-weight:700'>{n_wait}</div>
             <div style='margin-top:1rem'>
-                <span style='display:inline-block;background:rgba(14,165,233,0.1);
-                           border:1px solid #0ea5e9;border-radius:20px;
-                           padding:.3rem 1rem;font-size:.8rem;color:#7dd3fc'>
-                    ⏱️ Dernière mise à jour
-                </span>
+                <span class='wait-status {ws_cls}'>{ws_icon} {ws_txt}</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
 
-    # Boutons de contrôle
-    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Contrôle du flux</div>",
+    # ── Boutons d'action ──
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Actions</div>",
                 unsafe_allow_html=True)
-    
-    btn_c1, btn_c2, btn_c3, btn_c4 = st.columns(4, gap="medium")
+    btn_c1, btn_c2, btn_c3, btn_c4 = st.columns([1, 1, 1, 1], gap="medium")
 
     with btn_c1:
         st.markdown("""
-        <div style='background:#0d1a2e;border:1px solid #0ea5e9;border-radius:16px;
-                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
-            <div style='font-size:2.2rem;margin-bottom:.5rem'>➕</div>
-            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+        <div style='background:#0d1a2e;border:1px solid rgba(14,165,233,.2);border-radius:14px;
+                    padding:1.4rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2rem;margin-bottom:.4rem'>➕</div>
+            <div style='font-size:.75rem;color:#3a5a7a;font-weight:700;
                         letter-spacing:.06em;text-transform:uppercase'>Nouveau patient</div>
         </div>""", unsafe_allow_html=True)
         if st.button("Patient arrivé (+1)", use_container_width=True, key="btn_add"):
-            st.session_state.patient_counter += 1
+            st.session_state["waiting"] += 1
             st.rerun()
 
     with btn_c2:
         st.markdown("""
-        <div style='background:#0d1a2e;border:1px solid #10b981;border-radius:16px;
-                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
-            <div style='font-size:2.2rem;margin-bottom:.5rem'>✅</div>
-            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+        <div style='background:#0d1a2e;border:1px solid rgba(16,185,129,.2);border-radius:14px;
+                    padding:1.4rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2rem;margin-bottom:.4rem'>✅</div>
+            <div style='font-size:.75rem;color:#3a5a7a;font-weight:700;
                         letter-spacing:.06em;text-transform:uppercase'>Patient traité</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Patient sorti (-1)", use_container_width=True, key="btn_sub"):
-            if st.session_state.patient_counter > 0:
-                st.session_state.patient_counter -= 1
+        if st.button("Patient sorti (−1)", use_container_width=True, key="btn_sub"):
+            if st.session_state["waiting"] > 0:
+                st.session_state["waiting"] -= 1
             st.rerun()
 
     with btn_c3:
         st.markdown("""
-        <div style='background:#0d1a2e;border:1px solid #f59e0b;border-radius:16px;
-                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
-            <div style='font-size:2.2rem;margin-bottom:.5rem'>🔄</div>
-            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
-                        letter-spacing:.06em;text-transform:uppercase'>Réinitialiser</div>
+        <div style='background:#0d1a2e;border:1px solid rgba(245,158,11,.2);border-radius:14px;
+                    padding:1.4rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2rem;margin-bottom:.4rem'>🔢</div>
+            <div style='font-size:.75rem;color:#3a5a7a;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Définir le total</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Remettre à zéro", use_container_width=True, key="btn_reset"):
-            st.session_state.patient_counter = 0
+        manual_n = st.number_input("Nombre exact", min_value=0, max_value=100,
+                                    value=st.session_state["waiting"], step=1, key="wait_manual",
+                                    label_visibility="collapsed")
+        if manual_n != st.session_state["waiting"]:
+            st.session_state["waiting"] = manual_n
             st.rerun()
 
     with btn_c4:
         st.markdown("""
-        <div style='background:#0d1a2e;border:1px solid #f43f5e;border-radius:16px;
-                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
-            <div style='font-size:2.2rem;margin-bottom:.5rem'>⚡</div>
-            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
-                        letter-spacing:.06em;text-transform:uppercase'>Action rapide</div>
+        <div style='background:#0d1a2e;border:1px solid rgba(244,63,94,.2);border-radius:14px;
+                    padding:1.4rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2rem;margin-bottom:.4rem'>🗑️</div>
+            <div style='font-size:.75rem;color:#3a5a7a;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Réinitialiser</div>
         </div>""", unsafe_allow_html=True)
-        quick_add = st.number_input("Ajouter plusieurs", min_value=1, max_value=20, 
-                                     value=1, step=1, key="quick_add", 
-                                     label_visibility="collapsed")
-        if st.button(f"Ajouter {quick_add}", use_container_width=True, key="btn_quick"):
-            st.session_state.patient_counter += quick_add
+        if st.button("Remettre à zéro", use_container_width=True, key="btn_reset"):
+            st.session_state["waiting"] = 0
             st.rerun()
 
-    # Statistiques simples
-    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Statistiques du jour</div>",
+    # ── Jauge visuelle ──
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Visualisation de la capacité (20 places)</div>",
                 unsafe_allow_html=True)
-    
-    col_s1, col_s2, col_s3 = st.columns(3)
-    
-    with col_s1:
-        st.markdown(f"""
-        <div class='kpi-card kc-sky'>
-            <div class='kpi-num'>{st.session_state.patient_counter}</div>
-            <div class='kpi-lbl'>Patients aujourd'hui</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_s2:
-        # Estimation du temps d'attente (5 min par patient)
-        est_time = st.session_state.patient_counter * 5
-        st.markdown(f"""
-        <div class='kpi-card kc-emerald'>
-            <div class='kpi-num'>{est_time} min</div>
-            <div class='kpi-lbl'>Temps d'attente estimé</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_s3:
-        # Capacité (max 20 patients)
-        capacity_pct = min(int(st.session_state.patient_counter / 20 * 100), 100)
-        color = "#34d399" if capacity_pct < 50 else "#fbbf24" if capacity_pct < 80 else "#f43f5e"
-        st.markdown(f"""
-        <div class='kpi-card' style='border-top-color:{color}'>
-            <div class='kpi-num' style='color:{color}'>{capacity_pct}%</div>
-            <div class='kpi-lbl'>Capacité utilisée</div>
-        </div>
-        """, unsafe_allow_html=True)
+    n_cur     = st.session_state["waiting"]
+    max_slots = 20
+    if n_cur <= 3:    slot_color = "#34d399"
+    elif n_cur <= 8:  slot_color = "#fbbf24"
+    else:             slot_color = "#f43f5e"
 
-    # Barre de progression visuelle
-    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Capacité de la salle d'attente (20 places)</div>",
-                unsafe_allow_html=True)
-    
-    progress = min(st.session_state.patient_counter / 20, 1.0)
-    if progress < 0.3:
-        bar_color = "#34d399"
-    elif progress < 0.7:
-        bar_color = "#fbbf24"
-    else:
-        bar_color = "#f43f5e"
-    
+    dots = ""
+    for i in range(max_slots):
+        if i < min(n_cur, max_slots):
+            dots += (f"<span title='Patient {i+1}' style='display:inline-flex;align-items:center;"
+                     f"justify-content:center;width:44px;height:44px;border-radius:10px;"
+                     f"background:{slot_color}20;border:1.5px solid {slot_color}60;"
+                     f"margin:4px;font-size:.75rem;font-weight:700;color:{slot_color};"
+                     f"font-family:\"JetBrains Mono\",monospace'>{i+1}</span>")
+        else:
+            dots += (f"<span style='display:inline-flex;align-items:center;justify-content:center;"
+                     f"width:44px;height:44px;border-radius:10px;background:#0a1422;"
+                     f"border:1.5px solid #1e3456;margin:4px;font-size:.75rem;color:#1e3456;"
+                     f"font-family:\"JetBrains Mono\",monospace'>{i+1}</span>")
+
+    overflow = ""
+    if n_cur > max_slots:
+        overflow = (f"<div style='margin-top:.8rem;font-size:.8rem;color:#f43f5e;font-weight:700'>"
+                    f"+ {n_cur - max_slots} patients hors capacité affichée</div>")
+
+    pct = min(int(n_cur / max_slots * 100), 100)
+    bar_c = "#34d399" if pct <= 40 else "#fbbf24" if pct <= 70 else "#f43f5e"
+    alert = (f"<div style='margin-top:1.2rem;background:rgba(244,63,94,.08);"
+             f"border:1px solid rgba(244,63,94,.25);border-radius:8px;padding:.6rem 1rem;"
+             f"font-size:.79rem;color:#fb7185;font-weight:600'>"
+             f"⚠️ Capacité dépassée — prévoir un renfort médical</div>") if n_cur > max_slots//2 else ""
+
     st.markdown(f"""
-    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;padding:1.5rem'>
-        <div style='display:flex;justify-content:space-between;margin-bottom:.8rem'>
-            <span style='color:#4a6080;font-size:.8rem'>Occupation</span>
-            <span style='color:{bar_color};font-weight:700'>{st.session_state.patient_counter}/20</span>
+    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;
+                padding:1.6rem 1.8rem'>
+        <div style='display:flex;justify-content:space-between;align-items:center;
+                    margin-bottom:1rem'>
+            <div style='font-size:.68rem;font-weight:700;letter-spacing:.1em;
+                        text-transform:uppercase;color:#3a5a7a'>Occupation</div>
+            <div style='font-family:"JetBrains Mono",monospace;font-size:.9rem;
+                        color:{bar_c};font-weight:700'>{n_cur}/{max_slots} — {pct}%</div>
         </div>
-        <div style='background:#172847;border-radius:10px;height:20px;overflow:hidden'>
-            <div style='width:{progress*100}%;height:100%;background:{bar_color};
-                        border-radius:10px;transition:width .3s'></div>
+        <div style='background:#172847;border-radius:6px;height:8px;overflow:hidden;margin-bottom:1.2rem'>
+            <div style='width:{pct}%;height:100%;background:{bar_c};
+                        border-radius:6px;transition:width .4s'></div>
         </div>
-        <div style='margin-top:1rem;color:#3a5a7a;font-size:.75rem'>
-            {max(0, 20 - st.session_state.patient_counter)} places disponibles
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        <div style='line-height:1.6'>{dots}</div>
+        {overflow}{alert}
+    </div>""", unsafe_allow_html=True)
+
 
 # ── DOCTOR PAGE 2 — Exploration Clinique ────────────────────
 elif is_doc and page == DOC_PAGES[1]:
