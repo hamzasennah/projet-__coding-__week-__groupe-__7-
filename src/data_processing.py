@@ -25,3 +25,12 @@ df = df.drop_duplicates()
 
 # réinitialiser l'index
 df = df.reset_index(drop=True)
+
+# détecter colonnes catégorielles
+col_category = df.select_dtypes(include=['object']).columns
+
+# transformer en category
+df[col_category] = df[col_category].astype('category')
+
+# vérifier
+df.info()
