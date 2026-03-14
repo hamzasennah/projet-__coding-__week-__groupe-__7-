@@ -234,7 +234,7 @@ SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transp
 | 3 | Poids (Weight) | Élevé ➕ |
 | 4 | Genre (Gender) | Moyen |
 | 5 | Âge (Age) | Moyen |
-| 6 | Fréquence de consommation de légumes (FCVC) | Moyen ➕ |
+| 6 | Fréquence de consommation de légumes (FCVC) | Faible ➖ |
 | 7 | Consommation d’aliments hypercaloriques (FAVC) | Moyen ➕ |
 
 > ✏️ *Mettez à jour ce tableau avec vos résultats SHAP réels.*
