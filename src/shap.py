@@ -1,3 +1,8 @@
+"""
+SHAP Explainability Module
+Compatible avec train_model.py et evaluate_model.py du Groupe 7
+"""
+
 import os
 import joblib
 import numpy as np
@@ -39,6 +44,8 @@ def load_data_and_model():
     model = joblib.load(MODEL_PATH)
 
     return model, X_test.values, y_test.values, feature_names, y.unique()
+
+
 # ── Plot 1 : SHAP Summary (beeswarm) ─────────────────────────────────────────
 def generate_shap_plots():
     """
@@ -52,7 +59,8 @@ def generate_shap_plots():
     print("🔍 Calcul des SHAP values (200 samples)...")
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_test[:200])
-# ── Beeswarm ──────────────────────────────────────────────────────────
+
+    # ── Beeswarm ──────────────────────────────────────────────────────────
     print("📊 Génération du SHAP summary plot...")
     plt.figure()
     shap.summary_plot(
@@ -67,7 +75,7 @@ def generate_shap_plots():
     plt.close()
     print(f"✅ Sauvegardé → {path1}")
 
-# ── Bar plot ──────────────────────────────────────────────────────────
+    # ── Bar plot ──────────────────────────────────────────────────────────
     print("📊 Génération du SHAP bar plot...")
     plt.figure()
     if isinstance(shap_values, list):
@@ -86,6 +94,8 @@ def generate_shap_plots():
     plt.savefig(path2, bbox_inches='tight', dpi=150)
     plt.close()
     print(f"✅ Sauvegardé → {path2}")
+
+
 # ── Explication par patient (appelé depuis app.py) ────────────────────────────
 def explain_patient(X_patient, feature_names):
     """
@@ -123,4 +133,9 @@ def explain_patient(X_patient, feature_names):
     return pred_label, shap_df
 
 
-
+# ── Main ──────────────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    generate_shap_plots()
+    print("\n✅ SHAP plots générés avec succès !")
+    print(f"   → {os.path.join(SAVE_DIR, 'shap_summary.png')}")
+    print(f"   → {os.path.join(SAVE_DIR, 'shap_bar.png')}")
