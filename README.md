@@ -177,11 +177,10 @@ Trois modèles ont été entraînés et comparés :
 
 | Modèle | Accuracy | F1-score | ROC-AUC |
 |---|---|---|---|
-| Random Forest | ~XX% | ~XX% | ~XX% |
-| XGBoost | ~XX% | ~XX% | ~XX% |
-| **LightGBM ✅** | **~XX%** | **~XX%** | **~XX%** |
+| Random Forest | 0.9641% | 0.9643% | 0.9970% |
+| XGBoost | 0.9737% | 0.9738% | 0.9986% |
+| **LightGBM ✅** | **0.9737%** | **0.9735%** | **0.9991%** |
 
-> ✏️ *Remplacez les XX% par vos métriques réelles issues de `evaluate_model.py`.*
 
 **Modèle retenu : LightGBM**
 
