@@ -237,8 +237,6 @@ SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transp
 | 6 | Fréquence de consommation de légumes (FCVC) | Faible ➖ |
 | 7 | Consommation d’aliments hypercaloriques (FAVC) | Faible ➕ |
 
-> ✏️ *Mettez à jour ce tableau avec vos résultats SHAP réels.*
-
 Les explications SHAP sont **directement accessibles depuis l'interface** Streamlit, à la fois au niveau global (population) et au niveau individuel (par patient).
 
 ---
