@@ -33,7 +33,7 @@ col_category = df.select_dtypes(include=['object']).columns
 df[col_category] = df[col_category].astype('category')
 
 # vérifier
-
+df.info()
 # yes/no variables
 yes_no_cols = ['family_history_with_overweight', 'FAVC', 'SMOKE', 'SCC']
 
