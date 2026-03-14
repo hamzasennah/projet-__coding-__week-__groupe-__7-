@@ -106,3 +106,13 @@ sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
 plt.title('Correlation Matrix')
 plt.tight_layout()
 plt.show()
+
+numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+
+plt.figure(figsize=(11, 8))
+for i, col in enumerate(numeric_cols):
+    plt.subplot(4, 4, i + 1)
+    sns.boxplot(y=df[col])
+    plt.title(col)
+plt.tight_layout()
+plt.show()
