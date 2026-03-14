@@ -2,13 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-import shap
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -16,8 +13,10 @@ from sklearn.metrics import (
     accuracy_score, f1_score, confusion_matrix,
     classification_report, precision_score, recall_score,
 )
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
- ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 #  PAGE CONFIG
 # ═══════════════════════════════════════════════════════════
 st.set_page_config(
@@ -28,505 +27,461 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════
-#  CSS — DARK PREMIUM MEDICAL
+#  GLOBAL CSS — DARK MEDICAL PREMIUM (thème verrouillé)
 # ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;600&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; }
+/* ══════════════════════════════════════════
+   VERROUILLAGE THÈME SOMBRE — NE PAS RETIRER
+══════════════════════════════════════════ */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+#MainMenu,
+header[data-testid="stHeader"],
+footer { display:none !important; visibility:hidden !important; }
 
-:root {
-    --bg:        #0a0f1e !important;
-    --surface:   #111827 !important;
-    --surface2:  #1a2235 !important;
-    --surface3:  #222d42 !important;
-    --border:    rgba(255,255,255,.08);
-    --glow:      rgba(0,212,180,.25);
-    --teal:      #00d4b4;
-    --teal-dim:  rgba(0,212,180,.12);
-    --blue:      #3b82f6;
-    --green:     #22c55e;
-    --green-dim: rgba(34,197,94,.12);
-    --amber:     #f59e0b;
-    --amber-dim: rgba(245,158,11,.12);
-    --red:       #ef4444;
-    --red-dim:   rgba(239,68,68,.12);
-    --violet:    #8b5cf6;
-    --violet-dim:rgba(139,92,246,.12);
-    --cyan:      #06b6d4;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --dim:       #94a3b8;
-    --shadow:    0 0 30px rgba(0,212,180,.12);
-}
-
-html, body,
-[data-testid="stAppViewContainer"],
+html,body,#root,.stApp,
 [data-testid="stApp"],
+[data-testid="stAppViewContainer"],
 [data-testid="stMain"],
-.main,
-.block-container,
-[class*="css"] {
-    background-color: #0a0f1e !important;
-    color: #e2e8f0 !important;
-    font-family: 'DM Sans', sans-serif !important;
+[data-testid="stBottom"],
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="stColumn"],
+[data-testid="element-container"],
+.main,.block-container,
+.reportview-container,
+[class^="css-"],[class*=" css-"] {
+    background-color:#07101f !important;
+    color:#dde6f0 !important;
+}
+:root,[data-theme="light"],[data-theme="dark"],
+.stApp[data-theme="light"],.stApp[data-theme="dark"] {
+    --background-color:#07101f !important;
+    --secondary-background-color:#0d1a2e !important;
+    --text-color:#dde6f0 !important;
+    --primary-color:#0ea5e9 !important;
+    color-scheme:dark !important;
 }
 
-section[data-testid="stSidebar"] {
-    background: #111827 !important;
-    border-right: 1px solid rgba(255,255,255,.08) !important;
+/* ── Variables design system ── */
+:root {
+    --bg:        #07101f;
+    --surface:   #0d1a2e;
+    --surface2:  #112039;
+    --surface3:  #172847;
+    --border:    rgba(14,165,233,.18);
+    --border-sm: rgba(255,255,255,.07);
+    --sky:       #0ea5e9;
+    --sky-dim:   rgba(14,165,233,.12);
+    --indigo:    #6366f1;
+    --violet:    #8b5cf6;
+    --teal:      #14b8a6;
+    --emerald:   #10b981;
+    --amber:     #f59e0b;
+    --rose:      #f43f5e;
+    --text:      #dde6f0;
+    --muted:     #4a6080;
+    --dim:       #7a9ab8;
+    --nurse:     #0ea5e9;
+    --doctor:    #8b5cf6;
+    --lgbm:      #10b981;
+    --rf:        #0ea5e9;
+    --xgb:       #f59e0b;
+    --font-ui:   'Inter', sans-serif;
+    --font-disp: 'Playfair Display', serif;
+    --font-mono: 'JetBrains Mono', monospace;
 }
-section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
-section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,.08) !important; }
+
+html,body,[class*="css"] {
+    font-family: var(--font-ui) !important;
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg,#030c1a 0%,#071630 55%,#0a1e40 100%) !important;
+    border-right: 1px solid rgba(14,165,233,.15) !important;
+    width: 275px !important;
+}
+section[data-testid="stSidebar"] * { color: #c8daf0 !important; }
+section[data-testid="stSidebar"] hr { border-color: rgba(14,165,233,.15) !important; }
 section[data-testid="stSidebar"] .stRadio label {
-    font-size: .87rem !important;
-    padding: .55rem .75rem !important;
-    border-radius: 8px;
+    font-size: .875rem !important;
+    padding: .5rem .7rem !important;
+    border-radius: 8px !important;
     margin: 2px 0 !important;
     transition: all .18s;
     border: 1px solid transparent !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
-    background: #1a2235 !important;
-    border-color: rgba(0,212,180,.25) !important;
+    background: rgba(14,165,233,.1) !important;
+    border-color: rgba(14,165,233,.25) !important;
 }
 
-.main .block-container { padding: 1.8rem 2.2rem 3rem; max-width: 1500px; }
+/* ── Main ── */
+.main .block-container { padding: 1.75rem 2.2rem 3rem; max-width: 1500px; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius:3px; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #111827; }
-::-webkit-scrollbar-thumb { background: #222d42; border-radius: 3px; }
-
-[data-baseweb="select"] > div,
-[data-baseweb="input"] > div,
-.stTextInput > div > div,
-.stNumberInput > div > div {
-    background: #1a2235 !important;
-    border-color: rgba(255,255,255,.1) !important;
-    color: #e2e8f0 !important;
+/* ── Inputs ── */
+[data-baseweb="select"]>div,[data-baseweb="input"]>div,
+.stTextInput>div>div,.stNumberInput>div>div {
+    background: var(--surface2) !important;
+    border-color: var(--border-sm) !important;
+    color: var(--text) !important;
 }
-[data-baseweb="select"] option,
-[data-baseweb="menu"] {
-    background: #111827 !important;
-    color: #e2e8f0 !important;
+[data-baseweb="popover"],[role="listbox"],[data-baseweb="menu"] {
+    background: var(--surface2) !important;
 }
-[data-baseweb="popover"] { background: #111827 !important; }
-[role="listbox"] { background: #111827 !important; }
-[role="option"] { color: #e2e8f0 !important; }
-[role="option"]:hover { background: #1a2235 !important; }
-label, .stSelectbox label, .stSlider label,
-.stNumberInput label, [data-testid="stWidgetLabel"] {
-    color: #94a3b8 !important;
-    font-size: .84rem !important;
+[role="option"] { color: var(--text) !important; }
+[role="option"]:hover { background: var(--surface3) !important; }
+label,.stSelectbox label,.stSlider label,
+.stNumberInput label,[data-testid="stWidgetLabel"] {
+    color: var(--dim) !important; font-size:.84rem !important;
 }
 
-.stSlider [data-baseweb="thumb"] { background: #00d4b4 !important; border-color: #00d4b4 !important; }
-.stSlider [data-baseweb="track-fill"] { background: #00d4b4 !important; }
-.stSlider [data-baseweb="track"] { background: #222d42 !important; }
+/* ── Sliders ── */
+.stSlider [data-baseweb="thumb"] { background:var(--sky) !important; border-color:var(--sky) !important; }
+.stSlider [data-baseweb="track-fill"] { background:var(--sky) !important; }
+.stSlider [data-baseweb="track"] { background:var(--surface3) !important; }
 
+/* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #111827 !important;
-    border: 1px solid rgba(255,255,255,.08) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border-sm) !important;
     border-radius: 10px !important;
-    padding: .3rem !important;
-    gap: .2rem;
-    margin-bottom: 1rem;
+    padding: .3rem !important; gap: .2rem; margin-bottom:1rem;
 }
 .stTabs [data-baseweb="tab"] {
-    background: transparent !important;
-    color: #64748b !important;
-    font-weight: 600 !important;
-    font-size: .84rem !important;
-    border-radius: 8px !important;
-    border: none !important;
+    background: transparent !important; color: var(--muted) !important;
+    font-weight: 600 !important; font-size:.84rem !important;
+    border-radius: 8px !important; border: none !important;
 }
-.stTabs [aria-selected="true"] {
-    background: #1a2235 !important;
-    color: #00d4b4 !important;
-}
-.stTabs [data-baseweb="tab-highlight"] { display: none !important; }
-.stTabs [data-baseweb="tab-border"]    { display: none !important; }
+.stTabs [aria-selected="true"] { background:var(--surface2) !important; color:var(--sky) !important; }
+.stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"] { display:none !important; }
 
+/* ── Metrics ── */
 div[data-testid="metric-container"] {
-    background: #111827 !important;
-    border: 1px solid rgba(255,255,255,.08) !important;
-    border-radius: 12px !important;
-    padding: 1.1rem !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border-sm) !important;
+    border-radius: 12px !important; padding: 1rem !important;
 }
-div[data-testid="metric-container"] label,
 div[data-testid="metric-container"] [data-testid="stMetricLabel"] {
-    color: #64748b !important;
-    font-size: .75rem !important;
-    text-transform: uppercase;
-    letter-spacing: .06em;
+    color: var(--muted) !important; font-size:.73rem !important;
+    text-transform:uppercase; letter-spacing:.06em;
 }
 div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    color: #e2e8f0 !important;
-    font-family: 'DM Serif Display', serif !important;
-    font-size: 1.6rem !important;
+    color: var(--text) !important; font-family:var(--font-disp) !important; font-size:1.5rem !important;
 }
 
-.stButton > button {
-    background: linear-gradient(135deg,#00a896,#00d4b4) !important;
-    color: #0a0f1e !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: .65rem 2rem !important;
-    font-family: 'DM Sans',sans-serif !important;
-    font-weight: 700 !important;
-    letter-spacing: .04em !important;
-    font-size: .88rem !important;
-    box-shadow: 0 4px 20px rgba(0,212,180,.25) !important;
+/* ── Button ── */
+.stButton>button {
+    background: linear-gradient(135deg,#0369a1,#0ea5e9) !important;
+    color: #fff !important; border: none !important;
+    border-radius: 10px !important; padding: .65rem 2rem !important;
+    font-family: var(--font-ui) !important; font-weight: 700 !important;
+    letter-spacing: .04em !important; font-size: .88rem !important;
+    box-shadow: 0 4px 20px rgba(14,165,233,.3) !important;
     transition: all .2s !important;
 }
-.stButton > button:hover {
-    opacity: .9 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 28px rgba(0,212,180,.35) !important;
+.stButton>button:hover {
+    opacity:.9 !important; transform:translateY(-2px) !important;
+    box-shadow: 0 8px 28px rgba(14,165,233,.4) !important;
 }
 
-.stDataFrame, [data-testid="stDataFrame"] {
-    background: #111827 !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255,255,255,.08) !important;
+/* ── Alerts ── */
+.stAlert,[data-testid="stNotification"] {
+    background: var(--surface) !important;
+    border-color: var(--border-sm) !important; color: var(--text) !important;
 }
-.stDataFrame thead th {
-    background: #1a2235 !important;
-    color: #94a3b8 !important;
-    font-size: .78rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+.streamlit-expanderHeader { background: var(--surface) !important; color: var(--text) !important; }
+.stSpinner>div { border-top-color: var(--sky) !important; }
+hr { border-color: var(--border-sm) !important; }
+[data-baseweb="tag"] { background: var(--surface3) !important; }
+[data-baseweb="tag"] span { color: var(--text) !important; }
+
+/* ══════════════════════════════════════════
+   COMPOSANTS PERSONNALISÉS
+══════════════════════════════════════════ */
+
+/* Banner */
+.banner {
+    border-radius: 18px; padding: 2.2rem 2.8rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5);
 }
-.stDataFrame tbody tr { background: #111827 !important; }
-.stDataFrame tbody tr:nth-child(even) { background: #141c2e !important; }
-.stDataFrame tbody td {
-    color: #e2e8f0 !important;
-    font-size: .83rem !important;
-    border-bottom: 1px solid rgba(255,255,255,.04) !important;
-    font-family: 'JetBrains Mono', monospace !important;
+.banner-nurse  { background: linear-gradient(135deg,#032040 0%,#063a6e 55%,#0a4f8a 100%); }
+.banner-doctor { background: linear-gradient(135deg,#1a0a38 0%,#2d1065 55%,#3b1485 100%); }
+.banner::before {
+    content: '⚕';
+    position: absolute; right:2.5rem; top:50%; transform:translateY(-50%);
+    font-size:9rem; opacity:.06; pointer-events:none;
 }
-.stDataFrame tbody td:first-child {
-    color: #94a3b8 !important;
-    font-family: 'DM Sans', sans-serif !important;
+.banner::after {
+    content:''; position:absolute; top:-50px; left:-50px;
+    width:250px; height:250px;
+    background:rgba(255,255,255,.03); border-radius:50%; pointer-events:none;
+}
+.banner-pre {
+    font-size:.7rem; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+    margin-bottom:.5rem; opacity:.7;
+}
+.banner-title {
+    font-family: var(--font-disp);
+    font-size: 2.1rem; font-weight:700; color:#f0f7ff;
+    margin:0 0 .4rem; line-height:1.15;
+}
+.banner-sub { font-size:.9rem; opacity:.7; margin:0; font-weight:400; line-height:1.6; }
+.banner-badge {
+    display:inline-block;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+    border-radius:20px; padding:.25rem .8rem; font-size:.72rem; font-weight:600;
+    margin:.65rem .3rem 0 0; letter-spacing:.03em; backdrop-filter:blur(4px);
 }
 
-.stAlert, [data-testid="stNotification"] {
-    background: #111827 !important;
-    border-color: rgba(255,255,255,.1) !important;
-    color: #e2e8f0 !important;
-}
-.streamlit-expanderHeader {
-    background: #111827 !important;
-    color: #e2e8f0 !important;
-}
-
-.stSpinner > div { border-top-color: #00d4b4 !important; }
-
-.stNumberInput button {
-    background: #222d42 !important;
-    color: #94a3b8 !important;
-    border-color: rgba(255,255,255,.1) !important;
-}
-
-[data-baseweb="tag"] { background: #222d42 !important; }
-[data-baseweb="tag"] span { color: #e2e8f0 !important; }
-
-hr { border-color: rgba(255,255,255,.08) !important; }
-
-/* ══════════════════════════════
-   CUSTOM COMPONENTS
-══════════════════════════════ */
-
-.page-banner {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 16px;
-    padding: 2rem 2.5rem;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-}
-.page-banner::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg,rgba(0,212,180,.05) 0%,transparent 60%);
-    pointer-events: none;
-}
-.banner-nurse::before  { background: linear-gradient(135deg,rgba(6,182,212,.07) 0%,transparent 60%); }
-.banner-doctor::before { background: linear-gradient(135deg,rgba(124,58,237,.07) 0%,transparent 60%); }
-.banner-eyebrow {
-    font-size: .7rem; font-weight: 700; letter-spacing: .13em;
-    text-transform: uppercase; margin-bottom: .55rem;
-}
-.ey-nurse  { color: #06b6d4; }
-.ey-doctor { color: #a78bfa; }
-.banner-h1 {
-    font-family: 'DM Serif Display',serif;
-    font-size: 2rem; font-weight: 400; color: #f8fafc;
-    margin: 0 0 .4rem; line-height: 1.15;
-}
-.banner-sub { font-size: .9rem; color: #94a3b8; line-height: 1.6; margin: 0; }
-.banner-tag {
-    display: inline-block;
-    background: #222d42; border: 1px solid rgba(255,255,255,.08);
-    border-radius: 6px; padding: .2rem .65rem;
-    font-size: .71rem; font-weight: 600; color: #64748b;
-    margin: .6rem .3rem 0 0;
-    font-family: 'JetBrains Mono',monospace;
-}
-
+/* KPI Grid */
 .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
-    gap: .9rem; margin: 1.5rem 0;
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+    gap:1rem; margin:1.5rem 0;
 }
 .kpi-card {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 14px; padding: 1.4rem 1.3rem;
+    background: var(--surface);
+    border: 1px solid var(--border-sm);
+    border-top: 4px solid var(--sky);
+    border-radius: 14px; padding: 1.35rem 1.3rem;
     position: relative; overflow: hidden;
-    transition: border-color .2s,transform .2s;
+    transition: transform .22s, box-shadow .22s;
+    box-shadow: 0 4px 20px rgba(0,0,0,.35);
 }
-.kpi-card:hover { border-color: rgba(0,212,180,.25); transform: translateY(-2px); }
+.kpi-card:hover { transform:translateY(-3px); box-shadow:0 10px 32px rgba(0,0,0,.5); }
 .kpi-card::after {
-    content: '';
-    position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-    background: #00d4b4; border-radius: 0 0 14px 14px;
+    content:''; position:absolute; bottom:-24px; right:-24px;
+    width:80px; height:80px; border-radius:50%;
+    background:rgba(255,255,255,.03); pointer-events:none;
 }
-.c-blue::after   { background: #3b82f6; }
-.c-green::after  { background: #22c55e; }
-.c-amber::after  { background: #f59e0b; }
-.c-red::after    { background: #ef4444; }
-.c-violet::after { background: #8b5cf6; }
+.kc-sky    { border-top-color:var(--sky); }
+.kc-indigo { border-top-color:var(--indigo); }
+.kc-violet { border-top-color:var(--violet); }
+.kc-teal   { border-top-color:var(--teal); }
+.kc-emerald{ border-top-color:var(--emerald); }
+.kc-amber  { border-top-color:var(--amber); }
+.kc-rose   { border-top-color:var(--rose); }
 .kpi-num {
-    font-family: 'DM Serif Display',serif;
-    font-size: 2rem; color: #00d4b4; line-height: 1; margin-bottom: .35rem;
+    font-family: var(--font-disp);
+    font-size:2rem; color:var(--sky); line-height:1; margin-bottom:.35rem;
 }
-.c-blue   .kpi-num { color: #3b82f6; }
-.c-green  .kpi-num { color: #22c55e; }
-.c-amber  .kpi-num { color: #f59e0b; }
-.c-red    .kpi-num { color: #ef4444; }
-.c-violet .kpi-num { color: #8b5cf6; }
+.kc-indigo  .kpi-num { color:var(--indigo); }
+.kc-violet  .kpi-num { color:var(--violet); }
+.kc-teal    .kpi-num { color:var(--teal); }
+.kc-emerald .kpi-num { color:var(--emerald); }
+.kc-amber   .kpi-num { color:var(--amber); }
+.kc-rose    .kpi-num { color:var(--rose); }
 .kpi-lbl {
-    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
-    text-transform: uppercase; color: #64748b;
+    font-size:.69rem; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted);
 }
 
+/* Waiting room widget */
+.wait-card {
+    background: linear-gradient(135deg,#071a38,#0d2548);
+    border: 1px solid rgba(14,165,233,.25);
+    border-radius: 16px; padding: 1.5rem 1.8rem;
+    box-shadow: 0 6px 28px rgba(0,0,0,.45);
+}
+.wait-title {
+    font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--sky); margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem;
+}
+.wait-num {
+    font-family:var(--font-disp);
+    font-size:3.5rem; font-weight:700; color:#f0f7ff; line-height:1;
+    text-align:center; margin:.5rem 0;
+}
+.wait-sub { font-size:.78rem; color:var(--muted); text-align:center; }
+.wait-status {
+    display:inline-flex; align-items:center; gap:.4rem;
+    border-radius:20px; padding:.25rem .75rem;
+    font-size:.72rem; font-weight:700;
+}
+.ws-low  { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+.ws-mid  { background:rgba(245,158,11,.15);  color:#fbbf24; border:1px solid rgba(245,158,11,.3); }
+.ws-high { background:rgba(244,63,94,.15);   color:#fb7185; border:1px solid rgba(244,63,94,.3); }
+
+/* Section head */
 .sec-head {
-    font-family: 'DM Serif Display',serif;
-    font-size: 1.12rem; color: #f8fafc;
-    margin: 2rem 0 1rem;
-    display: flex; align-items: center; gap: .6rem;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid rgba(255,255,255,.08);
+    font-family: var(--font-disp);
+    font-size:1.1rem; color:#e8f1fa;
+    margin:2rem 0 1rem;
+    display:flex; align-items:center; gap:.6rem;
+    padding-bottom:.5rem;
+    border-bottom:1px solid var(--border-sm);
 }
 .dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
-.dot-teal   { background:#00d4b4; box-shadow:0 0 8px #00d4b4; }
-.dot-nurse  { background:#06b6d4; box-shadow:0 0 8px #06b6d4; }
-.dot-doctor { background:#8b5cf6; box-shadow:0 0 8px #8b5cf6; }
-.dot-violet { background:#8b5cf6; box-shadow:0 0 8px #8b5cf6; }
+.dot-sky    { background:var(--sky);     box-shadow:0 0 8px var(--sky); }
+.dot-violet { background:var(--violet);  box-shadow:0 0 8px var(--violet); }
+.dot-nurse  { background:var(--nurse);   box-shadow:0 0 8px var(--nurse); }
+.dot-doctor { background:var(--doctor);  box-shadow:0 0 8px var(--doctor); }
+.dot-emerald{ background:var(--emerald); box-shadow:0 0 8px var(--emerald); }
 
+/* Panel */
 .panel {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
-    border-left: 4px solid #00d4b4;
-    border-radius: 10px; padding: 1.1rem 1.4rem; margin-bottom: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border-sm);
+    border-left: 4px solid var(--sky);
+    border-radius: 10px; padding: 1.1rem 1.4rem; margin-bottom:1rem;
 }
-.p-teal   { border-left-color: #00d4b4; }
-.p-blue   { border-left-color: #3b82f6; }
-.p-green  { border-left-color: #22c55e; }
-.p-amber  { border-left-color: #f59e0b; }
-.p-red    { border-left-color: #ef4444; }
-.p-violet { border-left-color: #8b5cf6; }
-.p-nurse  { border-left-color: #06b6d4; }
-.p-doctor { border-left-color: #8b5cf6; }
+.p-nurse   { border-left-color:var(--nurse); }
+.p-doctor  { border-left-color:var(--doctor); }
+.p-sky     { border-left-color:var(--sky); }
+.p-emerald { border-left-color:var(--emerald); }
+.p-amber   { border-left-color:var(--amber); }
+.p-rose    { border-left-color:var(--rose); }
 .panel-title {
-    font-weight: 700; font-size: .87rem; color: #00d4b4;
-    margin-bottom: .3rem; letter-spacing: .03em;
+    font-weight:700; font-size:.87rem; color:var(--sky);
+    margin-bottom:.3rem; letter-spacing:.03em;
 }
-.p-green  .panel-title { color: #22c55e; }
-.p-amber  .panel-title { color: #f59e0b; }
-.p-red    .panel-title { color: #ef4444; }
-.p-violet .panel-title { color: #a78bfa; }
-.p-nurse  .panel-title { color: #06b6d4; }
-.p-doctor .panel-title { color: #a78bfa; }
-.panel-body { font-size: .84rem; color: #94a3b8; line-height: 1.6; }
+.p-emerald .panel-title { color:var(--emerald); }
+.p-amber   .panel-title { color:var(--amber); }
+.p-rose    .panel-title { color:var(--rose); }
+.p-nurse   .panel-title { color:var(--nurse); }
+.p-doctor  .panel-title { color:#a78bfa; }
+.panel-body { font-size:.84rem; color:var(--dim); line-height:1.6; }
 
+/* Model card */
 .model-card {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
+    background: var(--surface);
+    border: 1px solid var(--border-sm);
     border-radius: 14px; padding: 1.6rem 1.4rem;
-    text-align: center; transition: all .22s;
-    position: relative; overflow: hidden;
-    height: 100%;
+    text-align:center; transition:all .22s;
+    position:relative; overflow:hidden;
 }
-.model-card:hover { border-color: rgba(0,212,180,.25); transform: translateY(-3px); }
+.model-card:hover { border-color:rgba(14,165,233,.3); transform:translateY(-3px); box-shadow:0 10px 32px rgba(0,0,0,.5); }
 .model-card.best {
-    border-color: rgba(0,212,180,.35);
-    background: linear-gradient(160deg,rgba(0,212,180,.06),#111827);
+    border-color:rgba(16,185,129,.4);
+    background:linear-gradient(160deg,rgba(16,185,129,.06),var(--surface));
 }
 .model-card.best::before {
-    content: '⭐ Meilleur Modèle';
-    position: absolute; top: 10px; right: 10px;
-    background: rgba(0,212,180,.15); color: #00d4b4;
-    border: 1px solid rgba(0,212,180,.3);
-    border-radius: 20px; padding: .18rem .7rem;
-    font-size: .65rem; font-weight: 700; letter-spacing: .05em;
+    content:'⭐ Meilleur Modèle';
+    position:absolute; top:10px; right:10px;
+    background:rgba(16,185,129,.15); color:#34d399;
+    border:1px solid rgba(16,185,129,.35); border-radius:20px;
+    padding:.18rem .7rem; font-size:.64rem; font-weight:700; letter-spacing:.05em;
 }
-.model-icon  { font-size: 2.2rem; margin-bottom: .6rem; }
-.model-name  { font-weight: 700; font-size: .95rem; color: #e2e8f0; margin-bottom: .35rem; }
-.model-score { font-family:'DM Serif Display',serif; font-size:1.8rem; margin:.5rem 0; }
-.model-desc  { font-size: .77rem; color: #64748b; line-height: 1.5; }
+.model-icon  { font-size:2.2rem; margin-bottom:.6rem; }
+.model-name  { font-weight:700; font-size:.95rem; color:var(--text); margin-bottom:.35rem; }
+.model-score { font-family:var(--font-disp); font-size:1.8rem; margin:.5rem 0; }
+.model-desc  { font-size:.77rem; color:var(--muted); line-height:1.5; }
 
+/* Result box */
 .result-box {
-    border-radius: 16px; padding: 2.2rem;
-    text-align: center; margin: 1rem 0;
-    border: 1px solid rgba(255,255,255,.08);
-    background: #111827;
-    position: relative; overflow: hidden;
+    border-radius:16px; padding:2.2rem; text-align:center; margin:1rem 0;
+    border:1px solid var(--border-sm); background:var(--surface);
+    position:relative; overflow:hidden;
 }
-.rb-green { border-color:rgba(34,197,94,.3);  background:linear-gradient(160deg,rgba(34,197,94,.06),#111827); }
-.rb-amber { border-color:rgba(245,158,11,.3); background:linear-gradient(160deg,rgba(245,158,11,.06),#111827); }
-.rb-red   { border-color:rgba(239,68,68,.3);  background:linear-gradient(160deg,rgba(239,68,68,.06),#111827); }
+.rb-green  { border-color:rgba(16,185,129,.35); background:linear-gradient(160deg,rgba(16,185,129,.07),var(--surface)); }
+.rb-amber  { border-color:rgba(245,158,11,.35);  background:linear-gradient(160deg,rgba(245,158,11,.07),var(--surface)); }
+.rb-rose   { border-color:rgba(244,63,94,.35);   background:linear-gradient(160deg,rgba(244,63,94,.07),var(--surface)); }
 .result-emoji { font-size:3rem; display:block; margin-bottom:.8rem; }
-.result-title {
-    font-family:'DM Serif Display',serif;
-    font-size:1.9rem; font-weight:400;
-}
-.rb-green .result-title { color:#86efac; }
+.result-title { font-family:var(--font-disp); font-size:1.85rem; font-weight:700; }
+.rb-green .result-title { color:#6ee7b7; }
 .rb-amber .result-title { color:#fcd34d; }
-.rb-red   .result-title { color:#fca5a5; }
-.result-imc  { font-family:'JetBrains Mono',monospace; font-size:.87rem; color:#64748b; margin:.5rem 0; }
-.result-desc { font-size:.87rem; color:#94a3b8; margin-top:.5rem; }
+.rb-rose  .result-title { color:#fda4af; }
+.result-imc  { font-family:var(--font-mono); font-size:.87rem; color:var(--muted); margin:.5rem 0; }
+.result-desc { font-size:.87rem; color:var(--dim); margin-top:.5rem; }
 
+/* Rec card */
 .rec-card {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
-    border-left: 4px solid #00d4b4;
-    border-radius: 10px; padding: 1rem 1.3rem; margin: .5rem 0;
-    display: flex; align-items: flex-start; gap: 1rem;
-    transition: transform .18s, border-color .18s;
+    background:var(--surface); border:1px solid var(--border-sm);
+    border-left:4px solid var(--sky); border-radius:10px;
+    padding:1rem 1.3rem; margin:.5rem 0;
+    display:flex; align-items:flex-start; gap:1rem; transition:transform .18s;
 }
-.rec-card:hover { transform: translateX(4px); border-color: rgba(0,212,180,.3); }
-.rc-green { border-left-color: #22c55e; }
-.rc-amber { border-left-color: #f59e0b; }
-.rc-red   { border-left-color: #ef4444; }
+.rec-card:hover { transform:translateX(4px); }
+.rc-emerald { border-left-color:var(--emerald); }
+.rc-amber   { border-left-color:var(--amber); }
+.rc-rose    { border-left-color:var(--rose); }
 .rec-icon  { font-size:1.35rem; flex-shrink:0; margin-top:2px; }
-.rec-title { font-weight:700; font-size:.87rem; color:#e2e8f0; margin-bottom:.2rem; }
-.rec-text  { font-size:.79rem; color:#64748b; line-height:1.55; }
+.rec-title { font-weight:700; font-size:.87rem; color:var(--text); margin-bottom:.2rem; }
+.rec-text  { font-size:.79rem; color:var(--muted); line-height:1.55; }
 
+/* IMC live */
 .imc-live {
-    border-radius: 12px; padding: 1.2rem;
-    text-align: center; margin-top: .8rem;
-    border: 1px solid rgba(255,255,255,.08);
-    background: #1a2235;
+    border-radius:12px; padding:1.2rem; text-align:center; margin-top:.8rem;
+    border:1px solid var(--border-sm); background:var(--surface2);
 }
-.imc-label { font-size:.67rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#64748b; }
-.imc-value { font-family:'DM Serif Display',serif; font-size:2.6rem; line-height:1.1; margin:.2rem 0; }
+.imc-label { font-size:.66rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.imc-value { font-family:var(--font-disp); font-size:2.6rem; line-height:1.1; margin:.2rem 0; }
 .imc-cat   { font-size:.82rem; font-weight:700; margin-top:2px; }
 
+/* Chip */
 .chip {
-    display: inline-flex; align-items: center; gap: .3rem;
-    background: #1a2235; color: #94a3b8;
-    border: 1px solid rgba(255,255,255,.08); border-radius: 6px;
-    padding: .24rem .72rem; font-size: .74rem; font-weight: 600;
-    margin: .2rem; font-family: 'JetBrains Mono',monospace;
+    display:inline-flex; align-items:center; gap:.3rem;
+    background:var(--surface2); color:var(--dim);
+    border:1px solid var(--border-sm); border-radius:6px;
+    padding:.24rem .72rem; font-size:.73rem; font-weight:600;
+    margin:.2rem; font-family:var(--font-mono);
 }
-.chip-teal { background:rgba(0,212,180,.1); color:#00d4b4; border-color:rgba(0,212,180,.25); }
-.chip-violet { background:rgba(139,92,246,.1); color:#a78bfa; border-color:rgba(139,92,246,.25); }
+.chip-sky { background:var(--sky-dim); color:var(--sky); border-color:rgba(14,165,233,.3); }
 
+/* Form section */
 .form-section {
-    background: #111827;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 14px; padding: 1.4rem 1.6rem; margin-bottom: 1.2rem;
+    background:var(--surface); border:1px solid var(--border-sm);
+    border-radius:14px; padding:1.4rem 1.6rem; margin-bottom:1.2rem;
 }
 .form-title {
-    font-size: .78rem; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; margin-bottom: 1rem;
-    padding-bottom: .5rem; border-bottom: 1px solid rgba(255,255,255,.08);
+    font-size:.77rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    margin-bottom:1rem; padding-bottom:.5rem; border-bottom:1px solid var(--border-sm);
 }
-.ft-nurse  { color: #06b6d4; }
-.ft-doctor { color: #8b5cf6; }
+.ft-nurse  { color:var(--nurse); }
+.ft-doctor { color:var(--doctor); }
 
+/* Stat row */
 .stat-row {
-    display: flex; justify-content: space-between;
-    padding: .4rem 0; border-bottom: 1px solid rgba(255,255,255,.05);
-    font-size: .84rem;
+    display:flex; justify-content:space-between;
+    padding:.4rem 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:.84rem;
 }
-.stat-row:last-child { border-bottom: none; }
-.sk { color: #64748b; font-weight: 500; }
-.sv { color: #e2e8f0; font-weight: 700; font-family:'JetBrains Mono',monospace; font-size:.81rem; }
-
-.cmp-table { width:100%; border-collapse:collapse; }
-.cmp-table th {
-    background: #1a2235; color: #64748b; font-size:.75rem;
-    font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-    padding:.7rem 1rem; text-align:left; border-bottom:1px solid rgba(255,255,255,.08);
-}
-.cmp-table td {
-    padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,.05);
-    color:#e2e8f0; font-size:.88rem; font-family:'JetBrains Mono',monospace;
-}
-.cmp-table tr:hover td { background: #141c2e; }
-.cmp-best  { color:#00d4b4 !important; font-weight:700 !important; }
-.cmp-worst { color:#ef4444 !important; }
-
-/* SHAP specific */
-.shap-legend-item {
-    display: inline-flex; align-items: center; gap: .5rem;
-    margin: .2rem .5rem; font-size: .8rem; color: #94a3b8;
-}
-.shap-dot {
-    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
-}
-.shap-insight-card {
-    background: #0f1928;
-    border: 1px solid rgba(139,92,246,.2);
-    border-radius: 12px; padding: 1.2rem 1.4rem; margin: .4rem 0;
-    display: flex; align-items: flex-start; gap: .9rem;
-}
-.shap-insight-icon { font-size: 1.4rem; flex-shrink: 0; }
-.shap-insight-title { font-weight: 700; font-size: .85rem; color: #c4b5fd; margin-bottom: .15rem; }
-.shap-insight-text  { font-size: .79rem; color: #64748b; line-height: 1.55; }
+.stat-row:last-child { border-bottom:none; }
+.sk { color:var(--muted); font-weight:500; }
+.sv { color:var(--text); font-weight:700; font-family:var(--font-mono); font-size:.8rem; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
-#  CONSTANTS
+#  CONSTANTES
 # ═══════════════════════════════════════════════════════════
 CLASS_NAMES = {
-    0: "Poids Insuffisant",
-    1: "Poids Normal",
-    2: "Obésité Type I",
-    3: "Obésité Type II",
-    4: "Obésité Type III",
-    5: "Surpoids Niveau I",
-    6: "Surpoids Niveau II",
+    0:"Poids Insuffisant", 1:"Poids Normal",
+    2:"Obésité Type I",    3:"Obésité Type II",
+    4:"Obésité Type III",  5:"Surpoids Niveau I",
+    6:"Surpoids Niveau II",
 }
 CLASS_INFO = {
-    0: ("Poids Insuffisant",  "green", "IMC < 18.5",      "Risque de carences nutritionnelles. Suivi médical recommandé."),
-    1: ("Poids Normal",       "green", "18.5 ≤ IMC < 25", "Profil clinique sain. Maintenir les habitudes actuelles."),
-    2: ("Obésité Type I",     "red",   "30 ≤ IMC < 35",   "Risque cardiovasculaire modéré. Suivi médical requis."),
-    3: ("Obésité Type II",    "red",   "35 ≤ IMC < 40",   "Risque cardiovasculaire élevé. Consultation spécialiste."),
-    4: ("Obésité Type III",   "red",   "IMC ≥ 40",        "Obésité morbide. Prise en charge médicale urgente."),
-    5: ("Surpoids Niveau I",  "amber", "25 ≤ IMC < 27.5", "Surveiller l'alimentation. Augmenter l'activité physique."),
-    6: ("Surpoids Niveau II", "amber", "27.5 ≤ IMC < 30", "Bilan lipidique conseillé. Consultation diététicien."),
+    0:("Poids Insuffisant",  "green",  "IMC < 18.5",       "Risque de carences nutritionnelles. Suivi médical recommandé."),
+    1:("Poids Normal",       "green",  "18.5 ≤ IMC < 25",  "Profil clinique sain. Maintenir les habitudes actuelles."),
+    2:("Obésité Type I",     "red",    "30 ≤ IMC < 35",    "Risque cardiovasculaire modéré. Suivi médical requis."),
+    3:("Obésité Type II",    "red",    "35 ≤ IMC < 40",    "Risque cardiovasculaire élevé. Consultation spécialiste."),
+    4:("Obésité Type III",   "red",    "IMC ≥ 40",         "Obésité morbide. Prise en charge médicale urgente."),
+    5:("Surpoids Niveau I",  "amber",  "25 ≤ IMC < 27.5",  "Surveiller l'alimentation. Augmenter l'activité physique."),
+    6:("Surpoids Niveau II", "amber",  "27.5 ≤ IMC < 30",  "Bilan lipidique conseillé. Consultation diététicien."),
 }
 CLASS_HEX = {
-    0:"#22c55e",1:"#3b82f6",2:"#f59e0b",3:"#ef4444",
+    0:"#10b981",1:"#0ea5e9",2:"#f59e0b",3:"#f43f5e",
     4:"#8b5cf6",5:"#fbbf24",6:"#f97316",
 }
+CLASS_RB = {0:"rb-green",1:"rb-green",2:"rb-rose",3:"rb-rose",4:"rb-rose",5:"rb-amber",6:"rb-amber"}
 
 ALGO_LIST   = ["LightGBM Classifier","Random Forest Classifier","XGBoost Classifier"]
 ALGO_ICONS  = {"LightGBM Classifier":"⚡","Random Forest Classifier":"🌲","XGBoost Classifier":"🚀"}
-ALGO_COLORS = {"LightGBM Classifier":"#00d4b4","Random Forest Classifier":"#3b82f6","XGBoost Classifier":"#f97316"}
+ALGO_COLORS = {"LightGBM Classifier":"#10b981","Random Forest Classifier":"#0ea5e9","XGBoost Classifier":"#f59e0b"}
 ALGO_DESC   = {
     "LightGBM Classifier":      "Gradient Boosting ultra-rapide. Optimal sur données médicales tabulaires. Meilleure précision diagnostique.",
-    "Random Forest Classifier": "Ensemble d'arbres de décision. Robuste et interprétable cliniquement.",
+    "Random Forest Classifier": "Forêt d'arbres de décision. Robuste, interprétable et stable cliniquement.",
     "XGBoost Classifier":       "Extreme Gradient Boosting. Excellent équilibre vitesse / précision sur données structurées.",
 }
 BEST_ALGO = "LightGBM Classifier"
@@ -538,30 +493,11 @@ CALC_MAP   = {"Jamais":3,"Parfois":2,"Fréquemment":1,"Toujours":0}
 MTRANS_MAP = {"Automobile":0,"Vélo":1,"Moto":2,"Transport en commun":3,"Marche":4}
 
 ROLES       = ["👩‍⚕️  Infirmière — Saisie Patient","👨‍⚕️  Médecin — Analyse & Diagnostic"]
-NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique","🏥  Tableau de Bord"]
-DOC_PAGES   = ["📊  Exploration Clinique","📈  Analyse Statistique",
+NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique"]
+DOC_PAGES   = ["🏥  Tableau de Bord","📊  Exploration Clinique",
+               "📈  Analyse Statistique","🤖  Entraînement & Évaluation",
                "⚖️  Comparaison des Modèles","🩺  Diagnostic IA"]
-PALETTE     = ["#00d4b4","#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#f97316","#06b6d4"]
-
-# Labels lisibles pour les features SHAP
-FEATURE_LABELS = {
-    "Gender":                          "Genre",
-    "Age":                             "Âge",
-    "Height":                          "Taille (m)",
-    "Weight":                          "Poids (kg)",
-    "family_history_with_overweight":  "Ant. familiaux obésité",
-    "FAVC":                            "Aliments caloriques (FAVC)",
-    "FCVC":                            "Fréquence légumes (FCVC)",
-    "NCP":                             "Repas/jour (NCP)",
-    "CAEC":                            "Grignotage (CAEC)",
-    "SMOKE":                           "Tabagisme",
-    "CH2O":                            "Eau/jour (L)",
-    "SCC":                             "Surveillance cal. (SCC)",
-    "FAF":                             "Activité physique (j/sem)",
-    "TUE":                             "Temps écran (h/j)",
-    "CALC":                            "Alcool (CALC)",
-    "MTRANS":                          "Transport",
-}
+PALETTE     = ["#0ea5e9","#6366f1","#10b981","#f59e0b","#f43f5e","#8b5cf6","#f97316","#14b8a6"]
 
 
 # ═══════════════════════════════════════════════════════════
@@ -569,11 +505,11 @@ FEATURE_LABELS = {
 # ═══════════════════════════════════════════════════════════
 def dark_fig(w=10, h=5, ncols=1, nrows=1):
     plt.rcParams.update({
-        "figure.facecolor":"#111827","axes.facecolor":"#1a2235",
-        "axes.edgecolor":"#2d3a52",  "axes.labelcolor":"#94a3b8",
-        "xtick.color":"#64748b",     "ytick.color":"#64748b",
-        "text.color":"#e2e8f0",      "grid.color":"#1e293b",
-        "legend.facecolor":"#111827","legend.edgecolor":"#2d3a52",
+        "figure.facecolor":"#0d1a2e","axes.facecolor":"#112039",
+        "axes.edgecolor":"#1e3456",  "axes.labelcolor":"#7a9ab8",
+        "xtick.color":"#4a6080",     "ytick.color":"#4a6080",
+        "text.color":"#dde6f0",      "grid.color":"#172847",
+        "legend.facecolor":"#0d1a2e","legend.edgecolor":"#1e3456",
         "font.family":"DejaVu Sans", "figure.dpi":110,
     })
     if ncols==1 and nrows==1:
@@ -581,22 +517,10 @@ def dark_fig(w=10, h=5, ncols=1, nrows=1):
     return plt.subplots(nrows,ncols,figsize=(w,h))
 
 
-def set_dark_matplotlib():
-    """Apply dark theme to all matplotlib figures."""
-    plt.rcParams.update({
-        "figure.facecolor":"#111827","axes.facecolor":"#1a2235",
-        "axes.edgecolor":"#2d3a52",  "axes.labelcolor":"#94a3b8",
-        "xtick.color":"#64748b",     "ytick.color":"#64748b",
-        "text.color":"#e2e8f0",      "grid.color":"#1e293b",
-        "legend.facecolor":"#111827","legend.edgecolor":"#2d3a52",
-        "font.family":"DejaVu Sans", "figure.dpi":110,
-    })
-
-
 @st.cache_data
 def load_data():
     for p in ["data_clean.csv","data/data_clean.csv","../data/data_clean.csv",
-              "../data_clean.csv","/mnt/user-data/uploads/data_clean__2_.csv"]:
+              "../data_clean.csv","/mnt/user-data/uploads/data_clean__1_.csv"]:
         try: return pd.read_csv(p)
         except: pass
     st.error("❌ data_clean.csv introuvable."); st.stop()
@@ -620,48 +544,139 @@ def decode_df(raw: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
+def render_html_table(data: pd.DataFrame, max_rows: int = 12, height: int = 400):
+    """Table HTML hardcodée — indépendante du thème Streamlit."""
+    DIAG_C = {
+        "Poids Normal":       ("#06301a","#10b981"),
+        "Poids Insuffisant":  ("#062040","#38bdf8"),
+        "Surpoids Niveau I":  ("#2a1c04","#fbbf24"),
+        "Surpoids Niveau II": ("#2a1204","#f97316"),
+        "Obésité Type I":     ("#2a1a00","#f59e0b"),
+        "Obésité Type II":    ("#2a0814","#f43f5e"),
+        "Obésité Type III":   ("#1a0838","#a78bfa"),
+    }
+    TH = ("background:#0a1628;color:#3a5a7a;font-size:.7rem;font-weight:700;"
+          "letter-spacing:.07em;text-transform:uppercase;padding:.6rem .9rem;"
+          "text-align:left;border-bottom:2px solid #1e3456;white-space:nowrap;"
+          "position:sticky;top:0;z-index:1;")
+    S_IDX = "background:{bg};color:#1e3456;font-size:.72rem;font-family:'JetBrains Mono',monospace;padding:.58rem .9rem;border-bottom:1px solid #0e1a28;"
+    S_NUM = "background:{bg};color:#5a80a0;font-size:.82rem;font-family:'JetBrains Mono',monospace;padding:.58rem .9rem;border-bottom:1px solid #0e1a28;text-align:right;"
+    S_TXT = "background:{bg};color:#c8d8e8;font-size:.82rem;padding:.58rem .9rem;border-bottom:1px solid #0e1a28;"
+
+    subset = data.head(max_rows)
+    header = (f"<th style='{TH}'>#</th>"
+              + "".join([f"<th style='{TH}'>{c}</th>" for c in subset.columns]))
+    rows = ""
+    for ri,(_, row) in enumerate(subset.iterrows()):
+        bg = "#0d1a2e" if ri%2==0 else "#0a1422"
+        cells = f"<td style='{S_IDX.format(bg=bg)}'>{ri}</td>"
+        for col in subset.columns:
+            val = row[col]
+            if col == "Diagnostic":
+                bg2,fc = DIAG_C.get(str(val),("#0d1a2e","#7a9ab8"))
+                cells += (f"<td style='{S_TXT.format(bg=bg)}'>"
+                          f"<span style='background:{bg2};color:{fc};border:1px solid {fc}30;"
+                          f"border-radius:5px;padding:.16rem .55rem;font-size:.75rem;font-weight:700;"
+                          f"white-space:nowrap'>{val}</span></td>")
+            elif isinstance(val, float):
+                cells += f"<td style='{S_NUM.format(bg=bg)}'>{val:.2f}</td>"
+            elif isinstance(val, (int, np.integer)):
+                cells += f"<td style='{S_NUM.format(bg=bg)}'>{val}</td>"
+            else:
+                cells += f"<td style='{S_TXT.format(bg=bg)}'>{val}</td>"
+        rows += f"<tr>{cells}</tr>"
+
+    st.markdown(f"""
+    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;
+                overflow:auto;max-height:{height}px;box-shadow:0 4px 24px rgba(0,0,0,.5)'>
+        <table style='width:100%;border-collapse:collapse;min-width:900px'>
+            <thead><tr>{header}</tr></thead>
+            <tbody>{rows}</tbody>
+        </table>
+        <div style='padding:.4rem 1rem;font-size:.69rem;color:#1e3456;
+                    border-top:1px solid #0e1a28;background:#08111e'>
+            {min(max_rows,len(data))} / {len(data)} lignes affichées
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+def render_cmp_table(sc_df):
+    """Tableau de comparaison 100% inline — jamais influencé par le thème."""
+    metrics    = ["Accuracy","F1-Score","Précision","Rappel"]
+    best_v     = {m: sc_df[m].max() for m in metrics}
+    worst_v    = {m: sc_df[m].min() for m in metrics}
+
+    S_TH = ("background:#0a1628;color:#3a5a7a;font-size:.71rem;font-weight:700;"
+            "letter-spacing:.09em;text-transform:uppercase;padding:.75rem 1.2rem;"
+            "text-align:left;border-bottom:2px solid #1e3456;")
+    S_TD = ("background:#0d1a2e;color:#c8d8e8;font-size:.9rem;"
+            "font-family:'JetBrains Mono',monospace;padding:.82rem 1.2rem;"
+            "border-bottom:1px solid #0e1a28;text-align:right;")
+    S_AL = ("background:#0d1a2e;color:#c8d8e8;font-size:.87rem;font-weight:600;"
+            "padding:.82rem 1.2rem;border-bottom:1px solid #0e1a28;")
+
+    header = (f"<th style='{S_TH}'>Algorithme</th>"
+              + "".join([f"<th style='{S_TH}text-align:right'>{m}</th>" for m in metrics]))
+    rows   = ""
+    for algo in ALGO_LIST:
+        cells = (f"<td style='{S_AL}'>"
+                 f"<span style='color:{ALGO_COLORS[algo]};margin-right:.4rem'>{ALGO_ICONS[algo]}</span>"
+                 f"{algo}</td>")
+        for m in metrics:
+            v = sc_df.loc[algo,m]
+            if v == best_v[m]:
+                sty = f"{S_TD}color:#34d399;font-weight:800;"
+                suf = (" <span style='font-size:.6rem;background:#062e1a;color:#34d399;"
+                       "border:1px solid #34d39930;border-radius:3px;padding:.05rem .3rem;"
+                       "font-family:sans-serif;vertical-align:middle'>▲</span>")
+            elif v == worst_v[m]:
+                sty = f"{S_TD}color:#fb7185;font-weight:600;"
+                suf = ""
+            else:
+                sty,suf = S_TD,""
+            cells += f"<td style='{sty}'>{v:.2f}%{suf}</td>"
+        rows += f"<tr>{cells}</tr>"
+
+    st.markdown(f"""
+    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;
+                overflow:hidden;margin-top:.5rem;box-shadow:0 6px 30px rgba(0,0,0,.5)'>
+        <table style='width:100%;border-collapse:collapse'>
+            <thead><tr>{header}</tr></thead>
+            <tbody>{rows}</tbody>
+        </table>
+        <div style='padding:.45rem 1.2rem;font-size:.7rem;color:#1e3456;
+                    border-top:1px solid #0e1a28;background:#08111e'>
+            <span style='color:#34d399'>▲</span> Meilleur score &nbsp;·&nbsp;
+            <span style='color:#fb7185'>Rouge</span> = score le plus bas
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+# ── Train model — cache par algo ──────────────────────────────
+# Chaque algorithme est entraîné et mis en cache séparément.
+# Le cache est invalidé si les données ou le code changent.
 @st.cache_resource
-def train_model(algo=BEST_ALGO):
+def train_model(algo: str = BEST_ALGO):
     df   = load_data()
     X    = df.drop("NObeyesdad", axis=1)
     y    = df["NObeyesdad"]
-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=.2, random_state=42, stratify=y)
+    Xtr,Xte,ytr,yte = train_test_split(X,y,test_size=.2,random_state=42,stratify=y)
     sc   = StandardScaler()
     Xtrs = sc.fit_transform(Xtr)
     Xtes = sc.transform(Xte)
     clfs = {
-        "LightGBM Classifier":      LGBMClassifier(n_estimators=300, learning_rate=.05, num_leaves=63, random_state=42, verbose=-1),
-        "Random Forest Classifier": RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1),
-        "XGBoost Classifier":       XGBClassifier(n_estimators=200, learning_rate=.05, max_depth=6, random_state=42, eval_metric="mlogloss", verbosity=0),
+        "LightGBM Classifier":      LGBMClassifier(n_estimators=300,learning_rate=.05,num_leaves=63,random_state=42,verbose=-1),
+        "Random Forest Classifier": RandomForestClassifier(n_estimators=200,random_state=42,n_jobs=-1),
+        "XGBoost Classifier":       XGBClassifier(n_estimators=200,learning_rate=.05,max_depth=6,random_state=42,eval_metric="mlogloss",verbosity=0),
     }
-    clf  = clfs[algo]
+    clf = clfs[algo]
     clf.fit(Xtrs, ytr)
-    yp   = clf.predict(Xtes)
-
-    # Explainer SHAP — TreeExplainer pour modèles d'arbres
-    explainer = shap.TreeExplainer(clf)
-
-    # Échantillon test pour les visualisations globales (max 200 pour la perf)
-    shap_sample_size = min(200, len(Xtes))
-    Xtes_sample = Xtes[:shap_sample_size]
-
-    # Calcul des valeurs SHAP sur l'échantillon (liste de tableaux, un par classe)
-    shap_values = explainer.shap_values(Xtes_sample)
-
-    # Feature names depuis les colonnes originales
-    feature_names = X.columns.tolist()
-
-    return (
-        clf, sc, feature_names,
-        accuracy_score(yte, yp),
-        f1_score(yte, yp, average="weighted"),
-        precision_score(yte, yp, average="weighted"),
-        recall_score(yte, yp, average="weighted"),
-        confusion_matrix(yte, yp),
-        classification_report(yte, yp, output_dict=True),
-        Xtes, yte, yp,
-        explainer, shap_values, Xtes_sample,
-    )
+    yp  = clf.predict(Xtes)
+    return (clf, sc, X.columns.tolist(),
+            accuracy_score(yte,yp), f1_score(yte,yp,average="weighted"),
+            precision_score(yte,yp,average="weighted"), recall_score(yte,yp,average="weighted"),
+            confusion_matrix(yte,yp), classification_report(yte,yp,output_dict=True),
+            Xtes, yte, yp)
 
 
 @st.cache_data
@@ -674,268 +689,12 @@ def compare_models():
     return pd.DataFrame(rows).T
 
 
-def render_cmp_table(sc_df):
-    metrics = ["Accuracy","F1-Score","Précision","Rappel"]
-    best_vals  = {m: sc_df[m].max() for m in metrics}
-    worst_vals = {m: sc_df[m].min() for m in metrics}
-    rows_html = ""
-    for algo in ALGO_LIST:
-        icon = ALGO_ICONS[algo]; color = ALGO_COLORS[algo]
-        cells = f"<td style='color:{color};font-weight:700;font-size:.87rem'>{icon} {algo}</td>"
-        for m in metrics:
-            v = sc_df.loc[algo, m]
-            cls = "cmp-best" if v==best_vals[m] else ("cmp-worst" if v==worst_vals[m] else "")
-            cells += f"<td class='{cls}'>{v:.2f}%</td>"
-        rows_html += f"<tr>{cells}</tr>"
-    header = "".join([f"<th>{h}</th>" for h in ["Algorithme"]+metrics])
-    st.markdown(f"""
-    <div style='background:#111827;border:1px solid rgba(255,255,255,.08);
-                border-radius:12px;overflow:hidden;margin-top:.5rem'>
-        <table class='cmp-table'>
-            <thead><tr>{header}</tr></thead>
-            <tbody>{rows_html}</tbody>
-        </table>
-        <div style='padding:.55rem 1rem;font-size:.72rem;color:#334155;
-                    border-top:1px solid rgba(255,255,255,.05)'>
-            <span style='color:#00d4b4;font-weight:700'>■</span> Meilleur &nbsp;
-            <span style='color:#ef4444;font-weight:700'>■</span> Moins bon
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-
 # ═══════════════════════════════════════════════════════════
-#  SHAP UTILITIES
+#  SESSION STATE
 # ═══════════════════════════════════════════════════════════
-
-def get_shap_for_class(shap_values, class_idx):
-    """
-    Extrait les valeurs SHAP pour une classe donnée.
-    shap_values peut être :
-      - une liste de tableaux (shape: [n_classes][n_samples, n_features]) → TreeExplainer standard
-      - un tableau 3D (shape: [n_samples, n_features, n_classes])         → certaines versions
-    """
-    if isinstance(shap_values, list):
-        return shap_values[class_idx]          # shape (n_samples, n_features)
-    elif shap_values.ndim == 3:
-        return shap_values[:, :, class_idx]    # shape (n_samples, n_features)
-    else:
-        return shap_values                     # binaire ou déjà mono-classe
-
-
-def get_expected_value(explainer, class_idx):
-    """Extrait la valeur de base (expected_value) pour la classe donnée."""
-    ev = explainer.expected_value
-    if hasattr(ev, '__len__'):
-        return float(ev[class_idx])
-    return float(ev)
-
-
-def compute_global_shap_importance(shap_values, n_classes):
-    """
-    Calcule l'importance globale des features = moyenne des |SHAP| sur toutes les classes.
-    Retourne un tableau de shape (n_features,).
-    """
-    importances = []
-    for c in range(n_classes):
-        sv_c = get_shap_for_class(shap_values, c)
-        importances.append(np.abs(sv_c).mean(axis=0))
-    return np.mean(importances, axis=0)
-
-
-def plot_shap_waterfall_patient(explainer, patient_shap_values, pred_class,
-                                 patient_data, feature_names, class_name, class_color):
-    """
-    Waterfall SHAP individuel pour le patient → classe prédite.
-    Retourne la figure matplotlib.
-    """
-    set_dark_matplotlib()
-
-    sv_patient = get_shap_for_class(patient_shap_values, pred_class)[0]
-    base_val   = get_expected_value(explainer, pred_class)
-
-    # Trier par |SHAP| décroissant
-    n_display  = 10
-    order      = np.argsort(np.abs(sv_patient))[::-1][:n_display]
-
-    sv_top    = sv_patient[order]
-    feat_top  = [FEATURE_LABELS.get(feature_names[i], feature_names[i]) for i in order]
-    data_top  = patient_data[order]
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    colors = [class_color if v > 0 else "#3b82f6" for v in sv_top]
-    bars   = ax.barh(range(n_display), sv_top[::-1],
-                     color=colors[::-1], edgecolor="none", height=0.62)
-
-    labels_disp = [f"{feat_top[::-1][i]}  = {data_top[::-1][i]:.2f}" for i in range(n_display)]
-    ax.set_yticks(range(n_display))
-    ax.set_yticklabels(labels_disp, fontsize=8.5, color="#e2e8f0")
-    ax.axvline(0, color="#475569", lw=1.2, linestyle="--")
-    ax.set_xlabel("Contribution SHAP (impact sur la prédiction)", fontsize=9, color="#94a3b8")
-    ax.set_title(f"Explication individuelle — {class_name}",
-                 fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.18, linestyle="--")
-
-    # Annotations valeurs
-    for bar, v in zip(bars[::-1], sv_top[::-1]):
-        if abs(v) > 0.005:
-            ax.text(v + (0.003 if v >= 0 else -0.003),
-                    bar.get_y() + bar.get_height()/2,
-                    f"{v:+.3f}", va="center",
-                    ha="left" if v >= 0 else "right",
-                    fontsize=7.5, color="#e2e8f0", fontweight="700")
-
-    plt.tight_layout()
-    return fig
-
-
-def plot_shap_global_importance(shap_values, feature_names, n_classes, class_color):
-    """
-    Graphique d'importance globale SHAP (mean |SHAP| toutes classes).
-    """
-    set_dark_matplotlib()
-
-    importance = compute_global_shap_importance(shap_values, n_classes)
-    sorted_idx = np.argsort(importance)
-    labels     = [FEATURE_LABELS.get(feature_names[i], feature_names[i]) for i in sorted_idx]
-
-    fig, ax = plt.subplots(figsize=(7, 5))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    bar_colors = [class_color if i == sorted_idx[-1] else
-                  ("#a78bfa" if i == sorted_idx[-2] else "#00d4b4")
-                  for i in sorted_idx]
-
-    ax.barh(range(len(sorted_idx)), importance[sorted_idx],
-            color=bar_colors, edgecolor="none", height=0.62)
-    ax.set_yticks(range(len(sorted_idx)))
-    ax.set_yticklabels(labels, fontsize=8.5, color="#e2e8f0")
-    ax.set_xlabel("Importance SHAP moyenne |SHAP|", fontsize=9, color="#94a3b8")
-    ax.set_title("Importance Globale des Variables", fontsize=11,
-                 color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.18, linestyle="--")
-
-    for i, v in enumerate(importance[sorted_idx]):
-        ax.text(v + importance.max() * 0.01, i, f"{v:.4f}",
-                va="center", fontsize=7.5, color="#64748b", fontweight="600")
-
-    plt.tight_layout()
-    return fig
-
-
-def plot_shap_beeswarm(shap_values, Xtes_sample, feature_names, n_classes):
-    """
-    SHAP Summary Beeswarm plot (toutes classes, style médical sombre).
-    """
-    set_dark_matplotlib()
-
-    # Agréger les valeurs SHAP : moyenne absolue sur les classes pour le beeswarm
-    # On utilise la classe la plus fréquente prédite (ou on empile)
-    importance = compute_global_shap_importance(shap_values, n_classes)
-    order      = np.argsort(importance)[::-1][:12]  # top 12 features
-
-    # Construire un tableau (n_samples, n_features) = moyenne toutes classes
-    sv_mean = np.mean([get_shap_for_class(shap_values, c)
-                       for c in range(n_classes)], axis=0)
-
-    n_feats = len(order)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    for rank, feat_idx in enumerate(order[::-1]):
-        sv_f  = sv_mean[:, feat_idx]
-        raw_f = Xtes_sample[:, feat_idx]
-
-        # Normaliser les valeurs brutes → couleur (bleu=bas, rouge=haut)
-        vmin, vmax = raw_f.min(), raw_f.max()
-        if vmax > vmin:
-            norm = (raw_f - vmin) / (vmax - vmin)
-        else:
-            norm = np.zeros_like(raw_f)
-
-        colors = plt.cm.RdBu_r(norm)
-
-        # Jitter vertical pour lisibilité
-        jitter = np.random.normal(0, 0.08, size=len(sv_f))
-        ax.scatter(sv_f, rank + jitter, c=colors, s=14,
-                   alpha=0.65, linewidths=0, zorder=2)
-
-    feat_labels = [FEATURE_LABELS.get(feature_names[i], feature_names[i])
-                   for i in order[::-1]]
-    ax.set_yticks(range(n_feats))
-    ax.set_yticklabels(feat_labels, fontsize=9, color="#e2e8f0")
-    ax.axvline(0, color="#475569", lw=1.2, linestyle="--")
-    ax.set_xlabel("Valeur SHAP (impact moyen sur la prédiction)", fontsize=9, color="#94a3b8")
-    ax.set_title("Distribution SHAP — Impact de chaque variable sur les patients",
-                 fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.15, linestyle="--")
-
-    # Légende couleur (valeur haute/basse)
-    from matplotlib.cm import ScalarMappable
-    from matplotlib.colors import Normalize
-    sm = ScalarMappable(cmap="RdBu_r", norm=Normalize(0, 1))
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical",
-                        fraction=0.015, pad=0.01)
-    cbar.set_label("Valeur de la variable\n(bleu=bas  rouge=haut)", fontsize=7.5,
-                   color="#64748b")
-    cbar.ax.yaxis.set_tick_params(color="#64748b", labelsize=7)
-    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#64748b")
-    cbar.outline.set_edgecolor("#2d3a52")
-
-    plt.tight_layout()
-    return fig
-
-
-def generate_shap_insights(sv_patient, feature_names, pred_class, class_name):
-    """
-    Génère des insights médicaux automatiques basés sur les valeurs SHAP individuelles.
-    Retourne une liste de tuples (icon, title, text).
-    """
-    insights = []
-    order = np.argsort(np.abs(sv_patient))[::-1]
-
-    top3_idx  = order[:3]
-    top3_feat = [feature_names[i] for i in top3_idx]
-    top3_sv   = [sv_patient[i]    for i in top3_idx]
-
-    FEAT_CLINICAL = {
-        "Weight":                         ("⚖️", "Le poids est le facteur n°{rank} dans ce diagnostic."),
-        "Height":                         ("📏", "La taille est le facteur n°{rank} (influence via l'IMC)."),
-        "Age":                            ("🎂", "L'âge joue un rôle n°{rank} dans cette prédiction."),
-        "Gender":                         ("👤", "Le genre est le {rank}e facteur le plus influent."),
-        "FAF":                            ("🏃", "L'activité physique est le facteur n°{rank} (±{val:+.3f})."),
-        "CH2O":                           ("💧", "L'hydratation est le facteur n°{rank} dans ce diagnostic."),
-        "FCVC":                           ("🥦", "La consommation de légumes influence la prédiction (rang {rank})."),
-        "family_history_with_overweight": ("🧬", "Les antécédents familiaux constituent le facteur n°{rank}."),
-        "FAVC":                           ("🍔", "La consommation d'aliments caloriques impacte le diagnostic (rang {rank})."),
-        "CAEC":                           ("🍪", "Le grignotage est le facteur n°{rank} (impact {val:+.3f})."),
-        "SMOKE":                          ("🚬", "Le tabagisme est le {rank}e facteur le plus influent."),
-        "MTRANS":                         ("🚗", "Le mode de transport impacte le diagnostic (rang {rank})."),
-    }
-
-    for rank, (feat, sv) in enumerate(zip(top3_feat, top3_sv), 1):
-        direction = "augmente" if sv > 0 else "réduit"
-        label     = FEATURE_LABELS.get(feat, feat)
-        if feat in FEAT_CLINICAL:
-            icon, tpl = FEAT_CLINICAL[feat]
-            title = tpl.format(rank=rank, val=sv)
-        else:
-            icon  = "📌"
-            title = f"{label} est le facteur n°{rank} (impact {sv:+.3f})"
-        text = (f"Cette variable {direction} la probabilité de '{class_name}' "
-                f"de {abs(sv):.3f} point SHAP. "
-                f"{'Valeur haute → risque accru.' if sv > 0 else 'Valeur basse → effet protecteur.'}")
-        insights.append((icon, title, text))
-
-    return insights
+for key,val in [("patient",{}),("waiting",0),("trained_algos",set())]:
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 
 # ═══════════════════════════════════════════════════════════
@@ -943,80 +702,84 @@ def generate_shap_insights(sv_patient, feature_names, pred_class, class_name):
 # ═══════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown("""
-    <div style='padding:1.5rem 0 1rem;text-align:center'>
-        <div style='font-size:2.6rem;margin-bottom:.4rem'>🏥</div>
-        <div style='font-family:"DM Serif Display",serif;font-size:1.5rem;
-                    color:#f8fafc;font-weight:400'>ObesoScan</div>
-        <div style='font-size:.67rem;color:#334155;font-weight:700;
-                    letter-spacing:.12em;text-transform:uppercase;margin-top:3px'>
+    <div style='text-align:center;padding:1.6rem 0 1rem'>
+        <div style='font-size:2.8rem'>🏥</div>
+        <div style='font-family:"Playfair Display",serif;font-size:1.45rem;
+                    font-weight:700;color:#e8f4ff;margin-top:.4rem'>ObesoScan</div>
+        <div style='font-size:.67rem;color:rgba(255,255,255,.3);margin-top:4px;
+                    font-weight:600;letter-spacing:.12em;text-transform:uppercase'>
             Système Clinique IA · Groupe 7
         </div>
     </div>""", unsafe_allow_html=True)
     st.divider()
 
     st.markdown("<div style='font-size:.67rem;font-weight:700;letter-spacing:.1em;"
-                "text-transform:uppercase;color:#334155;margin-bottom:.5rem'>Rôle</div>",
+                "text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:.5rem'>Rôle</div>",
                 unsafe_allow_html=True)
-    role      = st.radio("role", ROLES, label_visibility="collapsed")
-    is_nurse  = role == ROLES[0]
-    is_doctor = not is_nurse
+    role     = st.radio("role", ROLES, label_visibility="collapsed")
+    is_nurse = role == ROLES[0]
+    is_doc   = not is_nurse
     st.divider()
 
     st.markdown("<div style='font-size:.67rem;font-weight:700;letter-spacing:.1em;"
-                "text-transform:uppercase;color:#334155;margin-bottom:.5rem'>Navigation</div>",
+                "text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:.5rem'>Navigation</div>",
                 unsafe_allow_html=True)
     page = st.radio("nav", NURSE_PAGES if is_nurse else DOC_PAGES, label_visibility="collapsed")
     st.divider()
 
-    if is_doctor:
+    if is_doc:
         st.markdown("<div style='font-size:.67rem;font-weight:700;letter-spacing:.1em;"
-                    "text-transform:uppercase;color:#334155;margin-bottom:.5rem'>Algorithme ML</div>",
+                    "text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:.5rem'>Algorithme ML</div>",
                     unsafe_allow_html=True)
         algo = st.radio("algo", ALGO_LIST, index=0, label_visibility="collapsed",
                         format_func=lambda x: ALGO_ICONS[x]+" "+x)
-        st.markdown("""
-        <div style='background:rgba(0,212,180,.07);border:1px solid rgba(0,212,180,.2);
-                    border-radius:10px;padding:.7rem .9rem;margin-top:.6rem;font-size:.77rem;
-                    color:#5eead4;line-height:1.55'>
-            <strong style='color:#00d4b4'>⚡ LightGBM</strong> — modèle le plus performant sur ce dataset médical.
-        </div>""", unsafe_allow_html=True)
-        st.divider()
+        is_cached = algo in st.session_state["trained_algos"]
         st.markdown(f"""
-        <div style='font-size:.72rem;color:#334155;line-height:1.8;padding-bottom:.5rem'>
-            <span style='color:#a78bfa;font-weight:700'>👨‍⚕️ Mode Médecin</span><br>
-            {ALGO_ICONS[algo]} {algo}
+        <div style='background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
+                    border-radius:10px;padding:.7rem .9rem;margin-top:.6rem;font-size:.77rem;
+                    color:#6ee7b7;line-height:1.55'>
+            <strong style='color:#34d399'>⚡ LightGBM</strong> — modèle le plus performant.
+            {"<br><span style='color:#059669;font-size:.68rem'>✓ Déjà entraîné (cache)</span>" if is_cached else ""}
         </div>""", unsafe_allow_html=True)
     else:
         algo = BEST_ALGO
-        st.markdown("""
-        <div style='font-size:.72rem;color:#334155;line-height:1.8;padding-bottom:.5rem'>
-            <span style='color:#06b6d4;font-weight:700'>👩‍⚕️ Mode Infirmière</span><br>
-            Saisie & collecte des données patient.
+
+    pat = st.session_state.get("patient", {})
+    if pat:
+        imc_sb = round(pat.get("weight",70)/(pat.get("height",1.70)**2),1)
+        st.markdown(f"""
+        <div style='background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.18);
+                    border-radius:10px;padding:.7rem .9rem;margin-top:.5rem;font-size:.76rem;
+                    color:#7dd3fc;line-height:1.6'>
+            👤 <strong style='color:#38bdf8'>Dossier actif</strong><br>
+            {pat.get("gender","—")} · {pat.get("age","—")} ans · IMC {imc_sb}
         </div>""", unsafe_allow_html=True)
 
-# ── Load data ──
+# ═══════════════════════════════════════════════════════════
+#  DATA
+# ═══════════════════════════════════════════════════════════
 df = load_data()
 
 
 # ╔═══════════════════════════════════════════════════════════╗
-#  NURSE — Page 1 : Dossier Patient
+#  NURSE PAGE 1 — Dossier Patient
 # ╚═══════════════════════════════════════════════════════════╝
 if is_nurse and page == NURSE_PAGES[0]:
     st.markdown("""
-    <div class='page-banner banner-nurse'>
-        <div class='banner-eyebrow ey-nurse'>👩‍⚕️ Interface Infirmière</div>
-        <div class='banner-h1'>Dossier Patient</div>
+    <div class='banner banner-nurse'>
+        <div class='banner-pre'>👩‍⚕️ Interface Infirmière</div>
+        <div class='banner-title'>Dossier Patient</div>
         <div class='banner-sub'>Saisie des données biométriques et administratives du patient</div>
-        <span class='banner-tag'>saisie-initiale</span>
-        <span class='banner-tag'>données-patient</span>
+        <span class='banner-badge'>saisie-initiale</span>
+        <span class='banner-badge'>données-patient</span>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("""
     <div class='panel p-nurse'>
         <div class='panel-title'>ℹ️ Instructions</div>
         <div class='panel-body'>
-            Remplissez tous les champs. Les données collectées seront transmises au médecin
-            pour le diagnostic IA. Les champs marqués <span style='color:#ef4444;font-weight:700'>*</span>
+            Remplissez tous les champs. Les données seront transmises au médecin pour le
+            diagnostic IA. Les champs <span style='color:#f43f5e;font-weight:700'>*</span>
             sont obligatoires.
         </div>
     </div>""", unsafe_allow_html=True)
@@ -1027,30 +790,30 @@ if is_nurse and page == NURSE_PAGES[0]:
         st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🪪 Identité & Biométrie</div>",
                     unsafe_allow_html=True)
         gender = st.selectbox("Genre *", ["Féminin","Masculin"], key="n_gender")
-        age    = st.number_input("Âge (années) *", min_value=10, max_value=90, value=28, step=1, key="n_age")
-        c1, c2 = st.columns(2)
+        age    = st.number_input("Âge *", min_value=10, max_value=90, value=28, step=1, key="n_age")
+        c1,c2  = st.columns(2)
         height = c1.number_input("Taille (m) *", min_value=1.40, max_value=2.15,
                                   value=1.70, step=0.01, format="%.2f", key="n_height")
         weight = c2.number_input("Poids (kg) *", min_value=30.0, max_value=200.0,
                                   value=70.0, step=0.5, key="n_weight")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        imc = round(weight/(height**2), 1)
-        if imc<18.5:   imc_c,imc_t="#60a5fa","Poids Insuffisant"
-        elif imc<25:   imc_c,imc_t="#22c55e","Poids Normal ✓"
-        elif imc<30:   imc_c,imc_t="#f59e0b","Surpoids"
-        else:          imc_c,imc_t="#ef4444","Obésité ⚠️"
+        imc = round(weight/(height**2),1)
+        if imc<18.5:   ic,it="#38bdf8","Poids Insuffisant"
+        elif imc<25:   ic,it="#34d399","Poids Normal ✓"
+        elif imc<30:   ic,it="#fbbf24","Surpoids"
+        else:          ic,it="#f43f5e","Obésité ⚠️"
         st.markdown(f"""
         <div class='imc-live'>
             <div class='imc-label'>Indice de Masse Corporelle</div>
-            <div class='imc-value' style='color:{imc_c}'>{imc}</div>
-            <div class='imc-cat' style='color:{imc_c}'>{imc_t}</div>
+            <div class='imc-value' style='color:{ic}'>{imc}</div>
+            <div class='imc-cat' style='color:{ic}'>{it}</div>
         </div>""", unsafe_allow_html=True)
 
         st.markdown("<div class='form-section' style='margin-top:1.2rem'>"
                     "<div class='form-title ft-nurse'>🩺 Antécédents & Statut</div>",
                     unsafe_allow_html=True)
-        family = st.selectbox("Antécédents familiaux d'obésité *", ["Non","Oui"], key="n_family")
+        family = st.selectbox("Antécédents familiaux *", ["Non","Oui"], key="n_family")
         smoke  = st.selectbox("Tabagisme actif", ["Non","Oui"], key="n_smoke")
         scc    = st.selectbox("Surveillance calorique (SCC)", ["Non","Oui"], key="n_scc")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1059,34 +822,38 @@ if is_nurse and page == NURSE_PAGES[0]:
         st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🍽️ Habitudes Alimentaires</div>",
                     unsafe_allow_html=True)
         favc = st.selectbox("Aliments très caloriques (FAVC)", ["Non","Oui"], key="n_favc")
-        fcvc = st.slider("Fréquence légumes (FCVC)", 1.0, 3.0, 2.0, 0.1, key="n_fcvc")
+        fcvc = st.slider("Fréquence légumes (FCVC)", 1.0, 3.0, 2.0, 0.1, key="n_fcvc",
+                         help="1=Jamais · 2=Parfois · 3=Toujours")
         ncp  = st.slider("Repas principaux / jour (NCP)", 1.0, 4.0, 3.0, 0.5, key="n_ncp")
-        caec = st.selectbox("Alimentation entre les repas (CAEC)",
+        caec = st.selectbox("Grignotage entre repas (CAEC)",
                             ["Jamais","Parfois","Fréquemment","Toujours"], key="n_caec")
-        calc = st.selectbox("Consommation d'alcool (CALC)",
+        calc = st.selectbox("Consommation alcool (CALC)",
                             ["Jamais","Parfois","Fréquemment","Toujours"], key="n_calc")
         st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🏃 Activité & Mode de Vie</div>",
                     unsafe_allow_html=True)
-        ch2o   = st.slider("Eau / jour (litres)", 1.0, 3.0, 2.0, 0.1, key="n_ch2o")
-        faf    = st.slider("Activité physique (jours/semaine)", 0.0, 3.0, 1.0, 0.1, key="n_faf")
-        tue    = st.slider("Temps écran quotidien (heures)", 0.0, 2.0, 1.0, 0.1, key="n_tue")
+        ch2o   = st.slider("Eau / jour (L)", 1.0, 3.0, 2.0, 0.1, key="n_ch2o")
+        faf    = st.slider("Activité physique (j/sem)", 0.0, 3.0, 1.0, 0.1, key="n_faf")
+        tue    = st.slider("Temps écran (h/j)", 0.0, 2.0, 1.0, 0.1, key="n_tue")
         mtrans = st.selectbox("Transport principal", list(MTRANS_MAP.keys()), key="n_mtrans")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Récapitulatif du dossier</div>",
+    st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Récapitulatif</div>",
                 unsafe_allow_html=True)
     cc1,cc2,cc3,cc4 = st.columns(4)
-    cc1.metric("🧍 Patient",       f"{['F','M'][GENDER_MAP[gender]]} · {age} ans")
+    cc1.metric("🧍 Patient", f"{['F','M'][GENDER_MAP[gender]]} · {age} ans")
     cc2.metric("📏 Taille / Poids", f"{height}m · {weight}kg")
-    cc3.metric("📊 IMC",           f"{imc}")
-    cc4.metric("🏃 Activité",      f"{faf}j/sem")
+    cc3.metric("📊 IMC", f"{imc}")
+    cc4.metric("🏃 Activité", f"{faf}j/sem")
 
     st.markdown("""
-    <div class='panel p-green' style='margin-top:1rem'>
-        <div class='panel-title'>✅ Dossier prêt pour le médecin</div>
-        <div class='panel-body'>Données collectées. Passez au <strong>Questionnaire Clinique</strong> pour compléter, puis transmettez au médecin.</div>
+    <div class='panel p-emerald' style='margin-top:1rem'>
+        <div class='panel-title'>✅ Dossier prêt</div>
+        <div class='panel-body'>
+            Passez au <strong>Questionnaire Clinique</strong> pour compléter le dossier,
+            puis transmettez au médecin.
+        </div>
     </div>""", unsafe_allow_html=True)
 
     st.session_state["patient"] = {
@@ -1097,14 +864,14 @@ if is_nurse and page == NURSE_PAGES[0]:
     }
 
 
-# ── NURSE Page 2 : Questionnaire Clinique ───────────────────
+# ── NURSE PAGE 2 — Questionnaire Clinique ───────────────────
 elif is_nurse and page == NURSE_PAGES[1]:
     st.markdown("""
-    <div class='page-banner banner-nurse'>
-        <div class='banner-eyebrow ey-nurse'>👩‍⚕️ Interface Infirmière</div>
-        <div class='banner-h1'>Questionnaire Clinique</div>
-        <div class='banner-sub'>Évaluation complémentaire des facteurs de risque comportementaux</div>
-        <span class='banner-tag'>questionnaire</span><span class='banner-tag'>facteurs-risque</span>
+    <div class='banner banner-nurse'>
+        <div class='banner-pre'>👩‍⚕️ Interface Infirmière</div>
+        <div class='banner-title'>Questionnaire Clinique</div>
+        <div class='banner-sub'>Évaluation des facteurs de risque comportementaux</div>
+        <span class='banner-badge'>questionnaire</span><span class='banner-badge'>facteurs-risque</span>
     </div>""", unsafe_allow_html=True)
 
     pat = st.session_state.get("patient",{})
@@ -1119,119 +886,251 @@ elif is_nurse and page == NURSE_PAGES[1]:
             st.markdown("<div class='form-section'><div class='form-title ft-nurse'>📋 Récapitulatif biométrique</div>",
                         unsafe_allow_html=True)
             imc_q = round(pat["weight"]/(pat["height"]**2),1)
-            rows  = [("Genre","Femme" if pat["gender"]=="Féminin" else "Homme"),
-                     ("Âge",f'{pat["age"]} ans'),("Taille",f'{pat["height"]} m'),
-                     ("Poids",f'{pat["weight"]} kg'),("IMC",f'{imc_q}'),
-                     ("Ant. familiaux",pat["family"]),("Tabagisme",pat["smoke"])]
-            html  = "".join([f"<div class='stat-row'><span class='sk'>{k}</span><span class='sv'>{v}</span></div>"
-                             for k,v in rows])
-            st.markdown(f"{html}</div>", unsafe_allow_html=True)
+            rows_s = [("Genre","Femme" if pat["gender"]=="Féminin" else "Homme"),
+                      ("Âge",f'{pat["age"]} ans'),("Taille",f'{pat["height"]} m'),
+                      ("Poids",f'{pat["weight"]} kg'),("IMC",f'{imc_q}'),
+                      ("Ant. familiaux",pat["family"]),("Tabagisme",pat["smoke"])]
+            html_r = "".join([f"<div class='stat-row'><span class='sk'>{k}</span>"
+                              f"<span class='sv'>{v}</span></div>" for k,v in rows_s])
+            st.markdown(f"{html_r}</div>", unsafe_allow_html=True)
 
         with c2:
-            st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🔍 Évaluation des risques</div>",
+            st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🔍 Score de risque</div>",
                         unsafe_allow_html=True)
             score,flags = 0,[]
-            if imc_q>=30:   score+=3; flags.append(("red","IMC ≥ 30 — Obésité clinique"))
+            if imc_q>=30:   score+=3; flags.append(("rose","IMC ≥ 30 — Obésité clinique"))
             elif imc_q>=25: score+=2; flags.append(("amber","IMC 25–30 — Zone Surpoids"))
-            else:           flags.append(("green","IMC dans la norme"))
-            if pat.get("family")=="Oui": score+=2; flags.append(("amber","Antécédents familiaux d'obésité"))
+            else:           flags.append(("emerald","IMC dans la norme"))
+            if pat.get("family")=="Oui": score+=2; flags.append(("amber","Antécédents familiaux"))
             if pat.get("faf",1)<1.0:     score+=1; flags.append(("amber","Activité physique insuffisante"))
             if pat.get("smoke")=="Oui":  score+=1; flags.append(("amber","Tabagisme actif"))
             if pat.get("caec") in ["Fréquemment","Toujours"]: score+=1; flags.append(("amber","Grignotage fréquent"))
             if pat.get("calc") in ["Fréquemment","Toujours"]: score+=1; flags.append(("amber","Alcool fréquent"))
-            if pat.get("ch2o",2)<1.5:    score+=1; flags.append(("red","Hydratation insuffisante"))
+            if pat.get("ch2o",2)<1.5:    score+=1; flags.append(("rose","Hydratation insuffisante"))
 
             level = "Risque Faible" if score<=2 else "Risque Modéré" if score<=4 else "Risque Élevé"
-            lc    = "#22c55e" if score<=2 else "#f59e0b" if score<=4 else "#ef4444"
+            lc    = "#34d399" if score<=2 else "#fbbf24" if score<=4 else "#f43f5e"
             st.markdown(f"""
-            <div style='background:rgba(0,0,0,.2);border:1px solid {lc}33;
+            <div style='background:rgba(0,0,0,.2);border:1px solid {lc}30;
                         border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem'>
-                <div style='font-size:.67rem;font-weight:700;letter-spacing:.1em;
-                            text-transform:uppercase;color:#475569;margin-bottom:.3rem'>Score de risque</div>
-                <div style='font-family:"DM Serif Display",serif;font-size:2rem;color:{lc}'>{score}/10</div>
-                <div style='font-size:.81rem;font-weight:700;color:{lc};margin-top:.2rem'>{level}</div>
+                <div style='font-size:.66rem;font-weight:700;letter-spacing:.1em;
+                            text-transform:uppercase;color:#4a6080;margin-bottom:.3rem'>Score de risque</div>
+                <div style='font-family:"Playfair Display",serif;font-size:2rem;color:{lc}'>{score}/10</div>
+                <div style='font-size:.8rem;font-weight:700;color:{lc};margin-top:.2rem'>{level}</div>
             </div>""", unsafe_allow_html=True)
+
+            C_MAP = {"emerald":"#34d399","amber":"#fbbf24","rose":"#f43f5e"}
+            I_MAP = {"emerald":"✅","amber":"⚠️","rose":"🚨"}
             for col,msg in flags:
-                icon = "✅" if col=="green" else "⚠️" if col=="amber" else "🚨"
-                c    = "#22c55e" if col=="green" else "#f59e0b" if col=="amber" else "#ef4444"
+                c = C_MAP[col]; icon = I_MAP[col]
                 st.markdown(f"""
                 <div style='background:rgba(0,0,0,.15);border-left:3px solid {c};
                             border-radius:0 8px 8px 0;padding:.44rem .9rem;
-                            margin:.3rem 0;font-size:.8rem;color:#94a3b8'>
+                            margin:.3rem 0;font-size:.8rem;color:#7a9ab8'>
                     {icon} {msg}
                 </div>""", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("""
         <div class='panel p-nurse' style='margin-top:1.5rem'>
-            <div class='panel-title'>📨 Transmission au médecin</div>
-            <div class='panel-body'>Dossier complet. Le médecin peut accéder au module <strong>Diagnostic IA</strong> pour la prédiction et les recommandations personnalisées.</div>
+            <div class='panel-title'>📨 Dossier prêt à transmettre</div>
+            <div class='panel-body'>
+                Le médecin peut accéder au <strong>Diagnostic IA</strong> pour la prédiction personnalisée.
+            </div>
         </div>""", unsafe_allow_html=True)
 
 
-# ── NURSE Page 3 : Tableau de Bord ──────────────────────────
-elif is_nurse and page == NURSE_PAGES[2]:
-    st.markdown("""
-    <div class='page-banner banner-nurse'>
-        <div class='banner-eyebrow ey-nurse'>👩‍⚕️ Interface Infirmière</div>
-        <div class='banner-h1'>Tableau de Bord - Compteur Patients</div>
-        <div class='banner-sub'>Gestion simple du flux de patients dans la clinique</div>
-        <span class='banner-tag'>compteur</span><span class='banner-tag'>flux-patients</span>
+# ╔═══════════════════════════════════════════════════════════╗
+#  DOCTOR PAGE 1 — Tableau de Bord
+# ╚═══════════════════════════════════════════════════════════╝
+elif is_doc and page == DOC_PAGES[0]:
+    st.markdown(f"""
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Tableau de Bord Clinique</div>
+        <div class='banner-sub'>Vue d'ensemble — {len(df):,} patients · 7 classes d'obésité · 3 algorithmes</div>
+        <span class='banner-badge'>population-study</span>
+        <span class='banner-badge'>ML-classification</span>
+        <span class='banner-badge'>groupe-7</span>
     </div>""", unsafe_allow_html=True)
 
-    if 'patient_counter' not in st.session_state:
-        st.session_state.patient_counter = 0
+    imc_vals = df["Weight"]/(df["Height"]**2)
+    obese    = df[df["NObeyesdad"].isin([2,3,4])].shape[0]
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+    # ── KPIs ──
+    st.markdown(f"""
+    <div class='kpi-grid'>
+        <div class='kpi-card kc-sky'>
+            <div class='kpi-num'>{len(df):,}</div>
+            <div class='kpi-lbl'>👤 Patients</div>
+        </div>
+        <div class='kpi-card kc-indigo'>
+            <div class='kpi-num'>{df.shape[1]-1}</div>
+            <div class='kpi-lbl'>🔬 Variables</div>
+        </div>
+        <div class='kpi-card kc-violet'>
+            <div class='kpi-num'>{df["NObeyesdad"].nunique()}</div>
+            <div class='kpi-lbl'>📊 Classes IMC</div>
+        </div>
+        <div class='kpi-card kc-rose'>
+            <div class='kpi-num'>{obese:,}</div>
+            <div class='kpi-lbl'>⚠️ Cas Obésité</div>
+        </div>
+        <div class='kpi-card kc-amber'>
+            <div class='kpi-num'>{round(imc_vals.mean(),1)}</div>
+            <div class='kpi-lbl'>📏 IMC Moyen</div>
+        </div>
+        <div class='kpi-card kc-emerald'>
+            <div class='kpi-num'>{round(df["Age"].mean(),1)}</div>
+            <div class='kpi-lbl'>🗓️ Âge Moyen</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── SALLE D'ATTENTE WIDGET ──
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Gestion de la Salle d'Attente</div>",
+                unsafe_allow_html=True)
+
+    wa_col1, wa_col2, wa_col3 = st.columns([1, 1, 2], gap="medium")
+
+    with wa_col1:
+        n_wait = st.session_state["waiting"]
+        if n_wait <= 3:    ws_cls,ws_txt = "ws-low","Flux normal"
+        elif n_wait <= 8:  ws_cls,ws_txt = "ws-mid","Attente modérée"
+        else:              ws_cls,ws_txt = "ws-high","Salle chargée"
+
         st.markdown(f"""
-        <div style='background:linear-gradient(160deg,#0d1a2e,#132237);
-                    border:2px solid #0ea5e9;border-radius:30px;
-                    padding:3rem 2rem;text-align:center;margin:1rem 0 2rem 0;
-                    box-shadow:0 20px 40px rgba(14,165,233,0.2)'>
-            <div style='font-size:.8rem;font-weight:700;letter-spacing:.15em;
-                        text-transform:uppercase;color:#4a6080;margin-bottom:1rem'>
-                Patients en consultation
-            </div>
-            <div style='font-family:"DM Serif Display",serif;font-size:7rem;
-                        font-weight:800;color:#e8f4ff;line-height:1;
-                        text-shadow:0 0 30px rgba(14,165,233,0.5)'>
-                {st.session_state.patient_counter}
+        <div class='wait-card'>
+            <div class='wait-title'>🏥 Patients en attente</div>
+            <div class='wait-num'>{n_wait}</div>
+            <div class='wait-sub'>
+                <span class='wait-status {ws_cls}'>● {ws_txt}</span>
             </div>
         </div>""", unsafe_allow_html=True)
 
-    btn_c1, btn_c2, btn_c3, btn_c4 = st.columns(4, gap="medium")
-    with btn_c1:
-        if st.button("Patient arrivé (+1)", use_container_width=True, key="btn_add_nurse"):
-            st.session_state.patient_counter += 1; st.rerun()
-    with btn_c2:
-        if st.button("Patient sorti (-1)", use_container_width=True, key="btn_sub_nurse"):
-            if st.session_state.patient_counter > 0:
-                st.session_state.patient_counter -= 1
+    with wa_col2:
+        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
+        b1, b2 = st.columns(2)
+        if b1.button("➕ Arrivée", use_container_width=True, key="btn_add"):
+            st.session_state["waiting"] += 1
             st.rerun()
-    with btn_c3:
-        if st.button("Remettre à zéro", use_container_width=True, key="btn_reset_nurse"):
-            st.session_state.patient_counter = 0; st.rerun()
-    with btn_c4:
-        quick_add = st.number_input("Ajouter plusieurs", min_value=1, max_value=20,
-                                     value=1, step=1, key="quick_add_nurse",
-                                     label_visibility="collapsed")
-        if st.button(f"Ajouter {quick_add}", use_container_width=True, key="btn_quick_nurse"):
-            st.session_state.patient_counter += quick_add; st.rerun()
+        if b2.button("✅ Sortie", use_container_width=True, key="btn_sub"):
+            if st.session_state["waiting"] > 0:
+                st.session_state["waiting"] -= 1
+            st.rerun()
 
-    col_s1, col_s2, col_s3 = st.columns(3)
-    col_s1.metric("Patients aujourd'hui", st.session_state.patient_counter)
-    col_s2.metric("Temps d'attente estimé", f"{st.session_state.patient_counter * 5} min")
-    capacity_pct = min(int(st.session_state.patient_counter / 20 * 100), 100)
-    col_s3.metric("Capacité utilisée", f"{capacity_pct}%")
+        manual_n = st.number_input("Définir manuellement", min_value=0, max_value=50,
+                                    value=st.session_state["waiting"], step=1, key="wait_manual")
+        if manual_n != st.session_state["waiting"]:
+            st.session_state["waiting"] = manual_n
+            st.rerun()
+
+    with wa_col3:
+        # Mini historique visuel
+        n_cur = st.session_state["waiting"]
+        max_slots = 20
+        filled = min(n_cur, max_slots)
+        dots = ""
+        for i in range(max_slots):
+            if i < filled:
+                if n_cur <= 3: color = "#34d399"
+                elif n_cur <= 8: color = "#fbbf24"
+                else: color = "#f43f5e"
+                dots += f"<span style='display:inline-block;width:22px;height:22px;border-radius:50%;background:{color};margin:3px;opacity:.85'></span>"
+            else:
+                dots += "<span style='display:inline-block;width:22px;height:22px;border-radius:50%;background:#172847;margin:3px;border:1px solid #1e3456'></span>"
+        st.markdown(f"""
+        <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;
+                    padding:1.2rem 1.4rem;'>
+            <div style='font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+                        color:#3a5a7a;margin-bottom:.8rem'>Capacité salle ({max_slots} places)</div>
+            <div style='line-height:1.4'>{dots}</div>
+            {"<div style='font-size:.75rem;color:#f43f5e;margin-top:.6rem;font-weight:600'>⚠️ Salle à plus de 50% — prévoir renfort</div>" if n_cur > max_slots//2 else ""}
+        </div>""", unsafe_allow_html=True)
+
+    # ── Charts ──
+    col1,col2 = st.columns([1.65,1], gap="large")
+
+    with col1:
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Répartition des classes cliniques</div>",
+                    unsafe_allow_html=True)
+        counts = df["NObeyesdad"].value_counts().sort_index()
+        fig,ax = dark_fig(8,5)
+        bars   = ax.barh([CLASS_NAMES[i] for i in counts.index],counts.values,
+                         color=[CLASS_HEX[i] for i in counts.index],edgecolor="none",height=.62)
+        for bar,val in zip(bars,counts.values):
+            ax.text(val+6,bar.get_y()+bar.get_height()/2,
+                    f"{val}  ({round(val/len(df)*100,1)}%)",
+                    va="center",fontsize=8.5,color="#4a6080",fontweight="600")
+        ax.set_xlabel("Nombre de patients",fontsize=9,color="#4a6080")
+        ax.spines[["top","right","left"]].set_visible(False)
+        ax.grid(axis="x",alpha=.2,linestyle="--")
+        ax.set_xlim(0,counts.max()*1.32)
+        ax.tick_params(colors="#7a9ab8")
+        plt.tight_layout(); st.pyplot(fig,use_container_width=True)
+
+    with col2:
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Genre</div>",
+                    unsafe_allow_html=True)
+        g = df["Gender"].value_counts()
+        fig2,ax2 = dark_fig(4.5,4.5)
+        wedges,texts,autos = ax2.pie(
+            g.values, labels=["Homme" if i==1 else "Femme" for i in g.index],
+            autopct="%1.1f%%", colors=["#0ea5e9","#8b5cf6"],
+            startangle=90, pctdistance=.76,
+            wedgeprops={"edgecolor":"#0d1a2e","linewidth":3},
+        )
+        for t in texts:  t.set_color("#7a9ab8"); t.set_fontsize(11)
+        for a in autos:  a.set_color("white"); a.set_fontsize(10); a.set_fontweight("bold")
+        plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Distribution de l'IMC par classe</div>",
+                unsafe_allow_html=True)
+    fig3,ax3 = dark_fig(13,4)
+    for i in range(7):
+        vals = (df[df["NObeyesdad"]==i]["Weight"]/df[df["NObeyesdad"]==i]["Height"]**2).dropna()
+        if len(vals)>3:
+            vals.plot.kde(ax=ax3,color=CLASS_HEX[i],linewidth=2.2,label=CLASS_NAMES[i])
+            ax3.fill_between(
+                np.linspace(vals.min(),vals.max(),200),0,
+                [ax3.lines[-1].get_ydata()[j]
+                 for j in np.linspace(0,len(ax3.lines[-1].get_ydata())-1,200,dtype=int)],
+                alpha=.07,color=CLASS_HEX[i])
+    ax3.set_xlabel("IMC (kg/m²)",fontsize=9,color="#4a6080")
+    ax3.set_ylabel("Densité",fontsize=9,color="#4a6080")
+    ax3.spines[["top","right"]].set_visible(False)
+    ax3.grid(alpha=.18,linestyle="--")
+    ax3.legend(fontsize=7.5,ncol=4)
+    plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
+
+    # ── Model cards ──
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Algorithmes de classification</div>",
+                unsafe_allow_html=True)
+    c1,c2,c3 = st.columns(3, gap="medium")
+    for col,a in zip([c1,c2,c3],ALGO_LIST):
+        col.markdown(f"""
+        <div class='model-card {"best" if a==BEST_ALGO else ""}'>
+            <div class='model-icon'>{ALGO_ICONS[a]}</div>
+            <div class='model-name' style='color:{ALGO_COLORS[a]}'>{a}</div>
+            <div class='model-desc'>{ALGO_DESC[a]}</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Aperçu du dataset (décodé)</div>",
+                unsafe_allow_html=True)
+    df_disp = decode_df(df)
+    st.markdown(
+        f"<span class='chip chip-sky'>{len(df):,} patients</span>"
+        f"<span class='chip'>{df.shape[1]} colonnes</span>"
+        f"<span class='chip'>12 premières lignes</span>",
+        unsafe_allow_html=True)
+    render_html_table(df_disp, max_rows=12, height=380)
 
 
-# ── DOCTOR Page 1 : Exploration Clinique ────────────────────
-elif is_doctor and page == DOC_PAGES[0]:
+# ── DOCTOR PAGE 2 — Exploration Clinique ────────────────────
+elif is_doc and page == DOC_PAGES[1]:
     st.markdown("""
-    <div class='page-banner banner-doctor'>
-        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-h1'>Exploration Clinique</div>
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Exploration Clinique</div>
         <div class='banner-sub'>Analyse exploratoire des variables biométriques et comportementales</div>
     </div>""", unsafe_allow_html=True)
 
@@ -1243,9 +1142,11 @@ elif is_doctor and page == DOC_PAGES[0]:
         c1,c2  = st.columns(2)
         with c1:
             fig,ax = dark_fig(6,4)
-            ax.hist(df[chosen],bins=40,color="#00d4b4",edgecolor="none",alpha=.8)
-            ax.axvline(df[chosen].mean(),color="#ef4444",linestyle="--",lw=1.8,label=f"Moy : {df[chosen].mean():.2f}")
-            ax.axvline(df[chosen].median(),color="#22c55e",linestyle="--",lw=1.8,label=f"Méd : {df[chosen].median():.2f}")
+            ax.hist(df[chosen],bins=40,color="#0ea5e9",edgecolor="none",alpha=.85)
+            ax.axvline(df[chosen].mean(),  color="#f43f5e",linestyle="--",lw=1.8,
+                       label=f"Moy : {df[chosen].mean():.2f}")
+            ax.axvline(df[chosen].median(),color="#34d399",linestyle="--",lw=1.8,
+                       label=f"Méd : {df[chosen].median():.2f}")
             ax.set_xlabel(chosen,fontsize=9)
             ax.spines[["top","right"]].set_visible(False)
             ax.grid(axis="y",alpha=.18,linestyle="--")
@@ -1262,21 +1163,22 @@ elif is_doctor and page == DOC_PAGES[0]:
             ax.legend(fontsize=7,ncol=2)
             plt.tight_layout(); st.pyplot(fig,use_container_width=True)
 
-        s = df[chosen]; cc = st.columns(5)
+        s = df[chosen]
+        cc = st.columns(5)
         for met,val in zip(["Moyenne","Médiane","Écart-type","Min","Max"],
                             [s.mean(),s.median(),s.std(),s.min(),s.max()]):
             cc[["Moyenne","Médiane","Écart-type","Min","Max"].index(met)].metric(met,f"{val:.3f}")
 
         nr = int(np.ceil(len(num_cols)/4))
-        fig_all,axes = dark_fig(14,nr*3,ncols=4,nrows=nr)
+        fig_a,axes = dark_fig(14,nr*3,ncols=4,nrows=nr)
         axes = axes.flatten()
         for idx,cn in enumerate(num_cols):
             axes[idx].hist(df[cn],bins=25,color=PALETTE[idx%len(PALETTE)],edgecolor="none",alpha=.85)
-            axes[idx].set_title(cn,fontsize=8.5,color="#94a3b8")
+            axes[idx].set_title(cn,fontsize=8.5,color="#7a9ab8")
             axes[idx].spines[["top","right"]].set_visible(False)
             axes[idx].tick_params(labelsize=7)
         for j in range(len(num_cols),len(axes)): axes[j].set_visible(False)
-        plt.tight_layout(); st.pyplot(fig_all,use_container_width=True)
+        plt.tight_layout(); st.pyplot(fig_a,use_container_width=True)
 
     with tab2:
         bxv = st.selectbox("Variable",num_cols,key="bxv")
@@ -1286,14 +1188,26 @@ elif is_doctor and page == DOC_PAGES[0]:
             ax.boxplot(vals,positions=[i],widths=.58,patch_artist=True,
                        boxprops=dict(facecolor=CLASS_HEX[i],alpha=.65),
                        medianprops=dict(color="white",linewidth=2.5),
-                       whiskerprops=dict(color="#475569",lw=1.2),
-                       capprops=dict(color="#475569",lw=1.2),
-                       flierprops=dict(marker="o",color="#475569",markersize=2.5,alpha=.4))
+                       whiskerprops=dict(color="#2d4a6a",lw=1.2),
+                       capprops=dict(color="#2d4a6a",lw=1.2),
+                       flierprops=dict(marker="o",color="#2d4a6a",markersize=2.5,alpha=.4))
         ax.set_xticks(range(7))
-        ax.set_xticklabels([CLASS_NAMES[i].replace(" ","\n") for i in range(7)],fontsize=8.5,color="#94a3b8")
+        ax.set_xticklabels([CLASS_NAMES[i].replace(" ","\n") for i in range(7)],fontsize=8.5,color="#7a9ab8")
         ax.spines[["top","right"]].set_visible(False)
         ax.grid(axis="y",alpha=.18,linestyle="--")
         plt.tight_layout(); st.pyplot(fig,use_container_width=True)
+
+        fig2,ax2 = dark_fig(10,5)
+        for i in range(7):
+            sub = df[df["NObeyesdad"]==i]
+            ax2.scatter(sub["Height"],sub["Weight"],s=20,alpha=.45,
+                        color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
+        ax2.set_xlabel("Taille (m)",fontsize=9); ax2.set_ylabel("Poids (kg)",fontsize=9)
+        ax2.set_title("Taille vs Poids — cartographie biométrique",fontsize=11,pad=10,color="#dde6f0")
+        ax2.spines[["top","right"]].set_visible(False)
+        ax2.grid(alpha=.15,linestyle="--")
+        ax2.legend(fontsize=7,ncol=2)
+        plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
 
     with tab3:
         sx1,sx2 = st.columns(2)
@@ -1302,9 +1216,10 @@ elif is_doctor and page == DOC_PAGES[0]:
         fig3,ax3 = dark_fig(10,5)
         for i in range(7):
             sub = df[df["NObeyesdad"]==i]
-            ax3.scatter(sub[xv],sub[yv],s=20,alpha=.45,color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
+            ax3.scatter(sub[xv],sub[yv],s=20,alpha=.45,
+                        color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
         ax3.set_xlabel(xv,fontsize=9); ax3.set_ylabel(yv,fontsize=9)
-        ax3.set_title(f"{xv} vs {yv}",fontsize=11,pad=10,color="#e2e8f0")
+        ax3.set_title(f"{xv} vs {yv}",fontsize=11,pad=10,color="#dde6f0")
         ax3.spines[["top","right"]].set_visible(False)
         ax3.grid(alpha=.15,linestyle="--")
         ax3.legend(fontsize=7.5,ncol=2)
@@ -1313,18 +1228,18 @@ elif is_doctor and page == DOC_PAGES[0]:
     with tab4:
         df_dec   = decode_df(df)
         cols_sel = st.multiselect("Colonnes",df_dec.columns.tolist(),default=df_dec.columns.tolist())
-        st.dataframe(df_dec[cols_sel],use_container_width=True,height=500)
-        st.markdown(f"<span class='chip chip-teal'>{len(df):,} patients</span>"
+        st.markdown(f"<span class='chip chip-sky'>{len(df):,} patients</span>"
                     f"<span class='chip'>{len(cols_sel)} colonnes</span>",
                     unsafe_allow_html=True)
+        render_html_table(df_dec[cols_sel], max_rows=20, height=520)
 
 
-# ── DOCTOR Page 2 : Analyse Statistique ─────────────────────
-elif is_doctor and page == DOC_PAGES[1]:
+# ── DOCTOR PAGE 3 — Analyse Statistique ─────────────────────
+elif is_doc and page == DOC_PAGES[2]:
     st.markdown("""
-    <div class='page-banner banner-doctor'>
-        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-h1'>Analyse Statistique</div>
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Analyse Statistique</div>
         <div class='banner-sub'>Corrélations cliniques, statistiques descriptives et détection d'anomalies</div>
     </div>""", unsafe_allow_html=True)
 
@@ -1335,34 +1250,36 @@ elif is_doctor and page == DOC_PAGES[1]:
         fig,ax = dark_fig(10,8)
         mask   = np.triu(np.ones_like(corr,dtype=bool))
         sns.heatmap(corr,ax=ax,mask=mask,
-                    cmap=sns.diverging_palette(200,10,as_cmap=True),
+                    cmap=sns.diverging_palette(220,20,as_cmap=True),
                     center=0,annot=True,fmt=".2f",annot_kws={"size":7.5},
-                    linewidths=.4,linecolor="#0a0f1e",cbar_kws={"shrink":.7})
-        ax.set_title("Corrélations inter-variables",fontsize=12,pad=10,color="#e2e8f0")
-        plt.xticks(fontsize=7.5,rotation=45,ha="right",color="#94a3b8")
-        plt.yticks(fontsize=7.5,color="#94a3b8")
+                    linewidths=.4,linecolor="#07101f",cbar_kws={"shrink":.7})
+        ax.set_title("Corrélations inter-variables",fontsize=12,pad=10,color="#dde6f0")
+        plt.xticks(fontsize=7.5,rotation=45,ha="right",color="#7a9ab8")
+        plt.yticks(fontsize=7.5,color="#7a9ab8")
         plt.tight_layout(); st.pyplot(fig,use_container_width=True)
 
         tc = corr["NObeyesdad"].drop("NObeyesdad").sort_values(key=abs,ascending=False)
         fig2,ax2 = dark_fig(9,4.5)
         ax2.barh(tc.index,tc.values,
-                 color=["#22c55e" if v>0 else "#ef4444" for v in tc.values],
+                 color=["#34d399" if v>0 else "#f43f5e" for v in tc.values],
                  edgecolor="none",height=.58)
-        ax2.axvline(0,color="#334155",lw=1.5)
+        ax2.axvline(0,color="#1e3456",lw=1.5)
         ax2.set_xlabel("Coefficient de Pearson",fontsize=9)
-        ax2.set_title("Impact sur le diagnostic d'obésité",fontsize=11,pad=10,color="#e2e8f0")
+        ax2.set_title("Impact sur le diagnostic",fontsize=11,pad=10,color="#dde6f0")
         ax2.spines[["top","right"]].set_visible(False)
         ax2.grid(axis="x",alpha=.18,linestyle="--")
+        for i,(v,n) in enumerate(zip(tc.values,tc.index)):
+            ax2.text(v+(.004 if v>=0 else -.004),i,f"{v:.3f}",va="center",
+                     ha="left" if v>=0 else "right",fontsize=8,color="#4a6080",fontweight="600")
         plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
 
     with tab2:
-        st.dataframe(df.describe().T.style.background_gradient(cmap="Blues"),
-                     use_container_width=True,height=400)
+        st.dataframe(df.describe().T, use_container_width=True, height=400)
         sv  = st.selectbox("Variable par classe",
                             df.select_dtypes(include=np.number).columns.drop("NObeyesdad").tolist())
         sbc = df.groupby("NObeyesdad")[sv].describe().round(3)
         sbc.index = [CLASS_NAMES[i] for i in sbc.index]
-        st.dataframe(sbc.style.background_gradient(cmap="Blues"),use_container_width=True)
+        st.dataframe(sbc, use_container_width=True)
 
     with tab3:
         nc   = df.select_dtypes(include=np.number).columns.drop("NObeyesdad").tolist()
@@ -1373,21 +1290,153 @@ elif is_doctor and page == DOC_PAGES[1]:
             rows.append({"Variable":c,"Q1":round(Q1,3),"Q3":round(Q3,3),
                          "IQR":round(IQR,3),"Outliers":n,"% Outliers":round(n/len(df)*100,2)})
         out = pd.DataFrame(rows).sort_values("Outliers",ascending=False)
-        st.dataframe(out.style.background_gradient(subset=["Outliers","% Outliers"],cmap="Reds"),
-                     use_container_width=True)
+        st.dataframe(out, use_container_width=True)
+        fig3,ax3 = dark_fig(9,4)
+        ax3.bar(out["Variable"],out["% Outliers"],
+                color=["#f43f5e" if v>5 else "#f59e0b" if v>2 else "#10b981" for v in out["% Outliers"]],
+                edgecolor="none",width=.6)
+        ax3.set_ylabel("% Outliers",fontsize=9)
+        ax3.set_title("Taux d'anomalies par variable",fontsize=11,pad=10,color="#dde6f0")
+        ax3.spines[["top","right"]].set_visible(False)
+        ax3.grid(axis="y",alpha=.18,linestyle="--")
+        plt.xticks(rotation=30,ha="right",fontsize=8.5)
+        plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
 
 
-# ── DOCTOR Page 3 : Comparaison des Modèles ─────────────────
-elif is_doctor and page == DOC_PAGES[2]:
+# ── DOCTOR PAGE 4 — Entraînement & Évaluation ───────────────
+elif is_doc and page == DOC_PAGES[3]:
+    st.markdown(f"""
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Entraînement & Évaluation</div>
+        <div class='banner-sub'>Algorithme : {ALGO_ICONS[algo]} <strong>{algo}</strong>
+            {"&ensp;· ⭐ Meilleur modèle" if algo==BEST_ALGO else ""}</div>
+    </div>""", unsafe_allow_html=True)
+
+    already_trained = algo in st.session_state["trained_algos"]
+
+    if already_trained:
+        st.markdown(f"""
+        <div class='panel p-emerald'>
+            <div class='panel-title'>✅ Modèle déjà entraîné</div>
+            <div class='panel-body'>
+                <strong>{algo}</strong> est en cache. Les résultats s'affichent instantanément.
+                Pour forcer un ré-entraînement, rechargez la page (F5).
+            </div>
+        </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class='panel p-sky'>
+            <div class='panel-title'>{ALGO_ICONS[algo]} {algo}</div>
+            <div class='panel-body'>{ALGO_DESC[algo]}</div>
+        </div>""", unsafe_allow_html=True)
+
+    run_btn = st.button(
+        f"{'🔄  Afficher les résultats' if already_trained else f'🚀  Entraîner — {algo}'}",
+        use_container_width=False
+    )
+
+    if run_btn or already_trained:
+        if not already_trained:
+            with st.spinner(f"⏳ Entraînement de {algo} en cours…"):
+                clf,sc_m,fc,acc,f1,prec,rec,cm,cr,_,yte,yp = train_model(algo)
+            st.session_state["trained_algos"].add(algo)
+        else:
+            clf,sc_m,fc,acc,f1,prec,rec,cm,cr,_,yte,yp = train_model(algo)
+
+        st.markdown("<div class='sec-head'><div class='dot dot-emerald'></div>Métriques de performance</div>",
+                    unsafe_allow_html=True)
+        mc = st.columns(4)
+        mc[0].metric("✅ Accuracy",  f"{acc*100:.2f}%")
+        mc[1].metric("📊 F1-Score",  f"{f1*100:.2f}%")
+        mc[2].metric("🎯 Précision", f"{prec*100:.2f}%")
+        mc[3].metric("📡 Rappel",    f"{rec*100:.2f}%")
+
+        lbl = [CLASS_NAMES[i].replace(" ","\n") for i in range(7)]
+        tab1,tab2,tab3,tab4 = st.tabs(["🔲 Matrice de Confusion","📋 Rapport Clinique",
+                                        "📊 Feature Importance","📉 Métriques par Classe"])
+        with tab1:
+            c1,c2 = st.columns(2)
+            with c1:
+                fig,ax = dark_fig(6,5)
+                sns.heatmap(cm,ax=ax,annot=True,fmt="d",
+                            cmap=sns.dark_palette("#0ea5e9",as_cmap=True),
+                            xticklabels=lbl,yticklabels=lbl,
+                            linewidths=.3,linecolor="#07101f")
+                ax.set_xlabel("Prédit",fontsize=9); ax.set_ylabel("Réel",fontsize=9)
+                ax.set_title("Matrice de confusion",fontsize=10,pad=8,color="#dde6f0")
+                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
+                plt.tight_layout(); st.pyplot(fig,use_container_width=True)
+            with c2:
+                cm_n = cm.astype(float)/cm.sum(axis=1)[:,np.newaxis]*100
+                fig2,ax2 = dark_fig(6,5)
+                sns.heatmap(cm_n,ax=ax2,annot=True,fmt=".1f",
+                            cmap=sns.dark_palette("#8b5cf6",as_cmap=True),
+                            xticklabels=lbl,yticklabels=lbl,
+                            linewidths=.3,linecolor="#07101f",
+                            cbar_kws={"label":"%"})
+                ax2.set_xlabel("Prédit",fontsize=9); ax2.set_ylabel("Réel",fontsize=9)
+                ax2.set_title("Matrice normalisée (%)",fontsize=10,pad=8,color="#dde6f0")
+                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
+                plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+
+        with tab2:
+            cr_df = pd.DataFrame(cr).T
+            st.dataframe(
+                cr_df.format("{:.3f}",subset=["precision","recall","f1-score"])
+                if hasattr(cr_df,"format") else cr_df,
+                use_container_width=True)
+
+        with tab3:
+            if hasattr(clf,"feature_importances_"):
+                fi  = pd.DataFrame({"Variable":fc,"Importance":clf.feature_importances_}).sort_values("Importance")
+                fig3,ax3 = dark_fig(9,6)
+                med = fi["Importance"].median()
+                ax3.barh(fi["Variable"],fi["Importance"],
+                         color=[ALGO_COLORS[algo] if v>med else "#1e3456" for v in fi["Importance"]],
+                         edgecolor="none",height=.62)
+                for i,(f_,v) in enumerate(zip(fi["Variable"],fi["Importance"])):
+                    ax3.text(v+.001,i,f"{v:.4f}",va="center",fontsize=8,color="#4a6080",fontweight="600")
+                ax3.spines[["top","right","left"]].set_visible(False)
+                ax3.grid(axis="x",alpha=.18,linestyle="--")
+                ax3.set_title(f"Importance — {algo}",fontsize=11,pad=10,color="#dde6f0")
+                plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
+            else:
+                st.info("Feature importance non disponible pour ce modèle.")
+
+        with tab4:
+            f1_c   = [cr.get(str(i),{}).get("f1-score",0) for i in range(7)]
+            prec_c = [cr.get(str(i),{}).get("precision",0) for i in range(7)]
+            rec_c  = [cr.get(str(i),{}).get("recall",0) for i in range(7)]
+            fig4,ax4 = dark_fig(11,5)
+            xp = np.arange(7); w=.27
+            ax4.bar(xp-w,prec_c,w,label="Précision",color="#0ea5e9",alpha=.9,edgecolor="none")
+            ax4.bar(xp,  rec_c, w,label="Rappel",   color="#14b8a6",alpha=.9,edgecolor="none")
+            ax4.bar(xp+w,f1_c,  w,label="F1-Score", color="#8b5cf6",alpha=.9,edgecolor="none")
+            ax4.set_xticks(xp)
+            ax4.set_xticklabels([CLASS_NAMES[i].replace(" ","\n") for i in range(7)],
+                                fontsize=8.5,color="#7a9ab8")
+            ax4.set_ylim(0,1.12)
+            ax4.spines[["top","right"]].set_visible(False)
+            ax4.grid(axis="y",alpha=.18,linestyle="--")
+            ax4.legend(fontsize=9)
+            plt.tight_layout(); st.pyplot(fig4,use_container_width=True)
+
+
+# ── DOCTOR PAGE 5 — Comparaison des Modèles ─────────────────
+elif is_doc and page == DOC_PAGES[4]:
     st.markdown("""
-    <div class='page-banner banner-doctor'>
-        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-h1'>Comparaison des Modèles</div>
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Comparaison des Modèles</div>
         <div class='banner-sub'>Mise en compétition · Random Forest · XGBoost · LightGBM</div>
     </div>""", unsafe_allow_html=True)
 
     with st.spinner("⏳ Évaluation des 3 modèles…"):
         sc_df = compare_models()
+    # Marquer les 3 comme entraînés
+    for a in ALGO_LIST:
+        st.session_state["trained_algos"].add(a)
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Tableau comparatif</div>",
                 unsafe_allow_html=True)
@@ -1398,25 +1447,46 @@ elif is_doctor and page == DOC_PAGES[2]:
     metrics_c = ["Accuracy","F1-Score","Précision","Rappel"]
     fig_c,axes_c = dark_fig(16,5,ncols=4,nrows=1)
     for idx,metric in enumerate(metrics_c):
-        vals = sc_df[metric]
-        bars = axes_c[idx].bar(range(3),vals.values,
-                               color=[ALGO_COLORS[a] for a in ALGO_LIST],
-                               edgecolor="none",width=.52)
+        vals  = sc_df[metric]
+        bars  = axes_c[idx].bar(range(3),vals.values,
+                                color=[ALGO_COLORS[a] for a in ALGO_LIST],
+                                edgecolor="none",width=.52)
         axes_c[idx].set_xticks(range(3))
         axes_c[idx].set_xticklabels(
             [a.replace(" Classifier","") for a in ALGO_LIST],
-            fontsize=7.5,rotation=18,ha="right",color="#94a3b8")
+            fontsize=7.5,rotation=18,ha="right",color="#7a9ab8")
         axes_c[idx].set_ylim(vals.min()-3,100)
-        axes_c[idx].set_title(f"{metric} (%)",fontsize=9.5,pad=8,fontweight="600",color="#e2e8f0")
+        axes_c[idx].set_title(f"{metric} (%)",fontsize=9.5,pad=8,fontweight="600",color="#dde6f0")
         axes_c[idx].spines[["top","right"]].set_visible(False)
         axes_c[idx].grid(axis="y",alpha=.18,linestyle="--")
         for bar,v in zip(bars,vals.values):
             axes_c[idx].text(bar.get_x()+bar.get_width()/2,v+.15,
                              f"{v:.1f}%",ha="center",va="bottom",
-                             fontsize=7.5,color="#e2e8f0",fontweight="700")
+                             fontsize=7.5,color="#dde6f0",fontweight="700")
     plt.tight_layout(); st.pyplot(fig_c,use_container_width=True)
 
-    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>🏆 Résultats finaux</div>",
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Radar Chart</div>",
+                unsafe_allow_html=True)
+    cats   = ["Accuracy","F1-Score","Précision","Rappel"]; N=len(cats)
+    angles = [n/float(N)*2*np.pi for n in range(N)]; angles += angles[:1]
+    plt.rcParams.update({"figure.facecolor":"#0d1a2e","axes.facecolor":"#0d1a2e","text.color":"#dde6f0"})
+    fig_r,ax_r = plt.subplots(figsize=(6.5,6.5),subplot_kw=dict(polar=True))
+    fig_r.patch.set_facecolor("#0d1a2e"); ax_r.set_facecolor("#112039")
+    ax_r.grid(color="#1e3456",linestyle="--",lw=.8)
+    ax_r.spines["polar"].set_color("#1e3456")
+    for a in ALGO_LIST:
+        vr = [sc_df.loc[a,m] for m in cats]; vr += vr[:1]
+        ax_r.plot(angles,vr,lw=2.5,color=ALGO_COLORS[a],label=a.replace(" Classifier",""))
+        ax_r.fill(angles,vr,alpha=.1,color=ALGO_COLORS[a])
+    ax_r.set_xticks(angles[:-1])
+    ax_r.set_xticklabels(cats,fontsize=10.5,color="#7a9ab8",fontweight="600")
+    ax_r.set_ylim(80,100)
+    ax_r.tick_params(axis="y",colors="#3a5a7a",labelsize=7.5)
+    ax_r.legend(loc="upper right",bbox_to_anchor=(1.45,1.1),fontsize=9.5,labelcolor="#dde6f0")
+    ax_r.set_title("Performance comparative",fontsize=11,color="#dde6f0",pad=20)
+    plt.tight_layout(); st.pyplot(fig_r,use_container_width=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>🏆 Podium</div>",
                 unsafe_allow_html=True)
     best = sc_df["Accuracy"].idxmax()
     c1,c2,c3 = st.columns(3,gap="medium")
@@ -1426,39 +1496,31 @@ elif is_doctor and page == DOC_PAGES[2]:
             <div class='model-icon'>{ALGO_ICONS[a]}</div>
             <div class='model-name' style='color:{ALGO_COLORS[a]}'>{a.replace(" Classifier","")}</div>
             <div class='model-score' style='color:{ALGO_COLORS[a]}'>{sc_df.loc[a,"Accuracy"]:.2f}%</div>
-            <div style='color:#64748b;font-size:.82rem;font-weight:600'>Accuracy</div>
-            <div style='color:#475569;font-size:.79rem;margin-top:.3rem'>F1 : {sc_df.loc[a,"F1-Score"]:.2f}%</div>
+            <div style='color:#4a6080;font-size:.82rem;font-weight:600'>Accuracy</div>
+            <div style='color:#3a5a7a;font-size:.79rem;margin-top:.3rem'>F1 : {sc_df.loc[a,"F1-Score"]:.2f}%</div>
         </div>""", unsafe_allow_html=True)
 
 
-# ╔═══════════════════════════════════════════════════════════╗
-#  DOCTOR Page 4 : Diagnostic IA  ██ avec SHAP ██
-# ╚═══════════════════════════════════════════════════════════╝
-elif is_doctor and page == DOC_PAGES[3]:
+# ── DOCTOR PAGE 6 — Diagnostic IA ───────────────────────────
+elif is_doc and page == DOC_PAGES[5]:
     st.markdown(f"""
-    <div class='page-banner banner-doctor'>
-        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-h1'>Diagnostic Individuel IA</div>
+    <div class='banner banner-doctor'>
+        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-title'>Diagnostic Individuel IA</div>
         <div class='banner-sub'>Prédiction personnalisée · {ALGO_ICONS[algo]} <strong>{algo}</strong>
             {"&ensp;· ⭐ Meilleur modèle" if algo==BEST_ALGO else ""}</div>
     </div>""", unsafe_allow_html=True)
 
-    with st.spinner("Initialisation du modèle et des valeurs SHAP…"):
-        (clf, sc_m, fc,
-         acc, f1, prec, rec,
-         cm, cr,
-         Xtes, yte, yp,
-         explainer, shap_values, Xtes_sample) = train_model(algo)
-
-    n_classes = len(CLASS_NAMES)
+    with st.spinner("Initialisation du modèle…"):
+        clf,sc_m,fc,acc,f1,prec,rec,*_ = train_model(algo)
+    st.session_state["trained_algos"].add(algo)
 
     st.markdown(
-        f"<span class='chip chip-teal'>{ALGO_ICONS[algo]} {algo}</span>"
+        f"<span class='chip chip-sky'>{ALGO_ICONS[algo]} {algo}</span>"
         f"<span class='chip'>✅ Acc {acc*100:.1f}%</span>"
         f"<span class='chip'>F1 {f1*100:.1f}%</span>"
         f"<span class='chip'>Prec {prec*100:.1f}%</span>"
-        f"<span class='chip'>Rapp {rec*100:.1f}%</span>"
-        f"<span class='chip chip-violet'>🔍 SHAP activé</span>",
+        f"<span class='chip'>Rapp {rec*100:.1f}%</span>",
         unsafe_allow_html=True)
 
     pat = st.session_state.get("patient",{})
@@ -1466,18 +1528,18 @@ elif is_doctor and page == DOC_PAGES[3]:
         st.markdown("""
         <div class='panel p-nurse'>
             <div class='panel-title'>🔗 Dossier infirmière importé</div>
-            <div class='panel-body'>Données pré-chargées depuis l'interface infirmière. Ajustez si nécessaire.</div>
+            <div class='panel-body'>Données pré-chargées. Ajustez si nécessaire avant le diagnostic.</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Paramètres Patient</div>",
                 unsafe_allow_html=True)
 
-    col1,col2,col3 = st.columns(3,gap="large")
-
-    def pidx(lst, key, default):
-        v = pat.get(key, default)
+    def pidx(lst,key,default):
+        v = pat.get(key,default)
         try: return lst.index(v)
         except: return lst.index(default)
+
+    col1,col2,col3 = st.columns(3,gap="large")
 
     with col1:
         st.markdown("<div class='form-section'><div class='form-title ft-doctor'>🪪 Biométrie</div>",
@@ -1492,31 +1554,31 @@ elif is_doctor and page == DOC_PAGES[3]:
         st.markdown("</div>",unsafe_allow_html=True)
 
         imc_d = round(weight/(height**2),1)
-        if imc_d<18.5:   imc_dc,imc_dt="#60a5fa","Poids Insuffisant"
-        elif imc_d<25:   imc_dc,imc_dt="#22c55e","Poids Normal ✓"
-        elif imc_d<30:   imc_dc,imc_dt="#f59e0b","Surpoids"
-        else:            imc_dc,imc_dt="#ef4444","Obésité ⚠️"
+        if imc_d<18.5:   idc,idt="#38bdf8","Poids Insuffisant"
+        elif imc_d<25:   idc,idt="#34d399","Poids Normal ✓"
+        elif imc_d<30:   idc,idt="#fbbf24","Surpoids"
+        else:            idc,idt="#f43f5e","Obésité ⚠️"
         st.markdown(f"""
         <div class='imc-live'>
             <div class='imc-label'>IMC Calculé</div>
-            <div class='imc-value' style='color:{imc_dc}'>{imc_d}</div>
-            <div class='imc-cat' style='color:{imc_dc}'>{imc_dt}</div>
+            <div class='imc-value' style='color:{idc}'>{imc_d}</div>
+            <div class='imc-cat' style='color:{idc}'>{idt}</div>
         </div>""", unsafe_allow_html=True)
 
     with col2:
         st.markdown("<div class='form-section'><div class='form-title ft-doctor'>🍽️ Alimentation</div>",
                     unsafe_allow_html=True)
-        favc = st.selectbox("Aliments caloriques (FAVC)",["Non","Oui"],
+        favc = st.selectbox("Aliments caloriques",["Non","Oui"],
                             index=pidx(["Non","Oui"],"favc","Non"),key="d_favc")
         fcvc = st.slider("Légumes (FCVC)",1.0,3.0,float(pat.get("fcvc",2.0)),0.1,key="d_fcvc")
-        ncp  = st.slider("Repas / jour (NCP)",1.0,4.0,float(pat.get("ncp",3.0)),0.5,key="d_ncp")
+        ncp  = st.slider("Repas / jour",1.0,4.0,float(pat.get("ncp",3.0)),0.5,key="d_ncp")
         caec = st.selectbox("Grignotage (CAEC)",["Jamais","Parfois","Fréquemment","Toujours"],
                             index=pidx(["Jamais","Parfois","Fréquemment","Toujours"],"caec","Parfois"),key="d_caec")
         calc = st.selectbox("Alcool (CALC)",["Jamais","Parfois","Fréquemment","Toujours"],
                             index=pidx(["Jamais","Parfois","Fréquemment","Toujours"],"calc","Jamais"),key="d_calc")
         st.markdown("</div>",unsafe_allow_html=True)
         st.markdown("""
-        <div class='panel p-green' style='margin-top:.8rem'>
+        <div class='panel p-emerald' style='margin-top:.8rem'>
             <div class='panel-title'>💡 Référence OMS</div>
             <div class='panel-body'>5 fruits/légumes/jour et 3 repas équilibrés réduisent le risque d'obésité de 35%.</div>
         </div>""", unsafe_allow_html=True)
@@ -1527,7 +1589,7 @@ elif is_doctor and page == DOC_PAGES[3]:
         smoke  = st.selectbox("Tabagisme",["Non","Oui"],
                               index=pidx(["Non","Oui"],"smoke","Non"),key="d_smoke")
         ch2o   = st.slider("Eau / jour (L)",1.0,3.0,float(pat.get("ch2o",2.0)),0.1,key="d_ch2o")
-        scc    = st.selectbox("Surveillance cal. (SCC)",["Non","Oui"],
+        scc    = st.selectbox("Surveillance calorique",["Non","Oui"],
                               index=pidx(["Non","Oui"],"scc","Non"),key="d_scc")
         faf    = st.slider("Activité (j/sem)",0.0,3.0,float(pat.get("faf",1.0)),0.1,key="d_faf")
         tue    = st.slider("Temps écran (h/j)",0.0,2.0,float(pat.get("tue",1.0)),0.1,key="d_tue")
@@ -1540,9 +1602,6 @@ elif is_doctor and page == DOC_PAGES[3]:
     with bcol:
         diag_btn = st.button("🩺  Lancer le Diagnostic",use_container_width=True)
 
-    # ════════════════════════════════════════════════════════
-    #  RÉSULTAT DU DIAGNOSTIC + SHAP
-    # ════════════════════════════════════════════════════════
     if diag_btn:
         row = {
             "Gender":GENDER_MAP[gender],"Age":float(age),
@@ -1559,104 +1618,105 @@ elif is_doctor and page == DOC_PAGES[3]:
         pred  = int(clf.predict(Xns)[0])
         proba = clf.predict_proba(Xns)[0] if hasattr(clf,"predict_proba") else None
         info  = CLASS_INFO[pred]
+        rb    = CLASS_RB[pred]
+        emoji = "✅" if info[1]=="green" else "⚠️" if info[1]=="amber" else "🚨"
 
-        rb_class  = {"green":"rb-green","amber":"rb-amber","red":"rb-red"}[info[1]]
-        emoji     = "✅" if info[1]=="green" else "⚠️" if info[1]=="amber" else "🚨"
-        pred_color = CLASS_HEX[pred]
+        # Décrémenter salle d'attente si possible
+        if st.session_state["waiting"] > 0:
+            st.session_state["waiting"] -= 1
 
-        # ── Résultat principal ──────────────────────────────
         st.markdown("---")
         st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Résultat du Diagnostic</div>",
                     unsafe_allow_html=True)
         rc1,rc2 = st.columns([1.2,1],gap="large")
         with rc1:
             st.markdown(f"""
-            <div class='result-box {rb_class}'>
+            <div class='result-box {rb}'>
                 <span class='result-emoji'>{emoji}</span>
                 <div class='result-title'>{info[0]}</div>
                 <div class='result-imc'>IMC : {imc_d} &nbsp;·&nbsp; {info[2]}</div>
                 <div class='result-desc'>{info[3]}</div>
             </div>""", unsafe_allow_html=True)
         with rc2:
+            col_imc = idc
             st.markdown(f"""
             <div class='panel p-doctor' style='height:100%'>
                 <div class='panel-title'>📋 Résumé Patient</div>
-                <div style='font-size:.85rem;line-height:2.1;color:#94a3b8'>
-                    <b style='color:#e2e8f0'>Genre :</b> {"Homme" if gender=="Masculin" else "Femme"}<br>
-                    <b style='color:#e2e8f0'>Âge :</b> {age} ans<br>
-                    <b style='color:#e2e8f0'>Taille / Poids :</b> {height} m · {weight} kg<br>
-                    <b style='color:#e2e8f0'>IMC :</b>
-                    <span style='color:{imc_dc};font-family:"JetBrains Mono",monospace;
+                <div style='font-size:.85rem;line-height:2.1;color:#7a9ab8'>
+                    <b style='color:#dde6f0'>Genre :</b> {"Homme" if gender=="Masculin" else "Femme"}<br>
+                    <b style='color:#dde6f0'>Âge :</b> {age} ans<br>
+                    <b style='color:#dde6f0'>Taille / Poids :</b> {height} m · {weight} kg<br>
+                    <b style='color:#dde6f0'>IMC :</b>
+                    <span style='color:{col_imc};font-family:"JetBrains Mono",monospace;
                                  font-weight:800;font-size:1rem'>{imc_d}</span><br>
-                    <b style='color:#e2e8f0'>Activité :</b> {faf} j/sem<br>
-                    <b style='color:#e2e8f0'>Hydratation :</b> {ch2o} L/j<br>
-                    <b style='color:#e2e8f0'>Tabagisme :</b> {smoke}<br>
-                    <b style='color:#e2e8f0'>Ant. familiaux :</b> {family}
+                    <b style='color:#dde6f0'>Activité :</b> {faf} j/sem<br>
+                    <b style='color:#dde6f0'>Hydratation :</b> {ch2o} L/j<br>
+                    <b style='color:#dde6f0'>Tabagisme :</b> {smoke}<br>
+                    <b style='color:#dde6f0'>Ant. familiaux :</b> {family}
                 </div>
             </div>""", unsafe_allow_html=True)
 
-        # ── Probabilités ────────────────────────────────────
         if proba is not None:
             st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Probabilités diagnostiques</div>",
                         unsafe_allow_html=True)
             fig_p,ax_p = dark_fig(11,4.5)
-            bars_p = ax_p.bar([CLASS_NAMES[i] for i in range(7)],proba,
-                              color=[CLASS_HEX[i] for i in range(7)],edgecolor="none",width=.58)
-            for bar,av in zip(bars_p,[1.0 if i==pred else .38 for i in range(7)]):
-                bar.set_alpha(av)
+            alpha_p = [1.0 if i==pred else .38 for i in range(7)]
+            bars_p  = ax_p.bar([CLASS_NAMES[i] for i in range(7)],proba,
+                               color=[CLASS_HEX[i] for i in range(7)],edgecolor="none",width=.58)
+            for bar,av in zip(bars_p,alpha_p): bar.set_alpha(av)
             ax_p.set_ylim(0,1.15)
-            ax_p.set_ylabel("Probabilité",fontsize=9,color="#64748b")
+            ax_p.set_ylabel("Probabilité",fontsize=9,color="#4a6080")
             ax_p.spines[["top","right"]].set_visible(False)
             ax_p.grid(axis="y",alpha=.18,linestyle="--")
-            plt.xticks(rotation=22,ha="right",fontsize=8.5,color="#94a3b8")
-            for bar,p_v in zip(bars_p,proba):
-                if p_v>.015:
-                    ax_p.text(bar.get_x()+bar.get_width()/2,p_v+.015,
-                              f"{p_v*100:.1f}%",ha="center",va="bottom",
-                              fontsize=8.5,color="#e2e8f0",fontweight="700")
+            plt.xticks(rotation=22,ha="right",fontsize=8.5,color="#7a9ab8")
+            for bar,p in zip(bars_p,proba):
+                if p>.015:
+                    ax_p.text(bar.get_x()+bar.get_width()/2,p+.015,
+                              f"{p*100:.1f}%",ha="center",va="bottom",
+                              fontsize=8.5,color="#dde6f0",fontweight="700")
             plt.tight_layout(); st.pyplot(fig_p,use_container_width=True)
 
-        # ── Recommandations ─────────────────────────────────
-        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Recommandations Médicales Personnalisées</div>",
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Recommandations Médicales</div>",
                     unsafe_allow_html=True)
         recs = []
         if faf<1.0:
-            recs.append(("red","🏃","Activité physique insuffisante",
-                         "Prescrire ≥ 150 min d'activité modérée/sem (OMS). Débuter par 20 min/j de marche rapide."))
+            recs.append(("rose","🏃","Activité physique insuffisante",
+                         "≥ 150 min d'activité modérée/sem (OMS). Débuter par 20 min/j de marche rapide."))
         elif faf>=2.5:
-            recs.append(("green","🏃","Activité physique optimale",
+            recs.append(("emerald","🏃","Activité physique optimale",
                          f"Niveau excellent ({faf} j/sem). Réduction du risque cardiovasculaire de 30%."))
         else:
             recs.append(("amber","🏃","Activité physique à renforcer",
                          "Progresser vers 3–4 séances/semaine (recommandations OMS 2024)."))
         if ch2o<1.5:
-            recs.append(("red","💧","Hydratation critique",
+            recs.append(("rose","💧","Hydratation critique",
                          f"{ch2o} L/j. Objectif minimum : 2 L/j (2.5 L en période chaude)."))
         elif ch2o>=2.0:
-            recs.append(("green","💧","Hydratation satisfaisante",
+            recs.append(("emerald","💧","Hydratation satisfaisante",
                          f"{ch2o} L/jour — conforme aux recommandations EFSA."))
         if caec in ["Fréquemment","Toujours"]:
-            recs.append(("red","🍪","Grignotage excessif",
+            recs.append(("rose","🍪","Grignotage excessif",
                          "+20–30% d'apport calorique. Orienter vers un diététicien."))
         if smoke=="Oui":
-            recs.append(("red","🚬","Tabagisme actif",
+            recs.append(("rose","🚬","Tabagisme actif",
                          "Perturbe le métabolisme lipidique. Consultation sevrage tabagique."))
         if family=="Oui":
             recs.append(("amber","🧬","Prédisposition génétique",
                          "Risque ×2–3. Suivi médical annuel et bilan métabolique complet."))
         if imc_d>=30:
-            recs.append(("red","⚕️","Consultation spécialiste urgente",
+            recs.append(("rose","⚕️","Consultation spécialiste urgente",
                          "Bilan lipidique, glycémie à jeun, TA. Orientation endocrinologue / nutritionniste."))
         elif 25<=imc_d<30:
             recs.append(("amber","⚕️","Suivi préventif recommandé",
                          "Consultation diététicien et bilan cardiovasculaire préventif."))
         else:
-            recs.append(("green","⚕️","Profil clinique satisfaisant",
+            recs.append(("emerald","⚕️","Profil clinique satisfaisant",
                          "IMC OMS normal. Maintenir les habitudes. Prochain bilan dans 12 mois."))
-        rc_map = {"green":"rc-green","amber":"rc-amber","red":"rc-red"}
+
+        RC_MAP = {"emerald":"rc-emerald","amber":"rc-amber","rose":"rc-rose"}
         for color,icon,title,text in recs:
             st.markdown(f"""
-            <div class='rec-card {rc_map[color]}'>
+            <div class='rec-card {RC_MAP[color]}'>
                 <div class='rec-icon'>{icon}</div>
                 <div>
                     <div class='rec-title'>{title}</div>
@@ -1664,206 +1724,11 @@ elif is_doctor and page == DOC_PAGES[3]:
                 </div>
             </div>""", unsafe_allow_html=True)
 
-
-        # ════════════════════════════════════════════════════
-        #  ██  SECTION SHAP — EXPLICABILITÉ IA  ██
-        # ════════════════════════════════════════════════════
-        st.markdown("---")
         st.markdown("""
-        <div class='sec-head'>
-            <div class='dot dot-violet'></div>
-            🔍 Explicabilité SHAP — Pourquoi cette prédiction ?
-        </div>""", unsafe_allow_html=True)
-
-        # Panel de présentation SHAP
-        st.markdown(f"""
-        <div style='background:linear-gradient(135deg,rgba(139,92,246,.07),rgba(0,0,0,0));
-                    border:1px solid rgba(139,92,246,.25);border-radius:14px;
-                    padding:1.4rem 1.8rem;margin-bottom:1.5rem'>
-            <div style='font-size:.67rem;font-weight:700;letter-spacing:.12em;
-                        text-transform:uppercase;color:#7c3aed;margin-bottom:.5rem'>
-                SHAP · SHapley Additive exPlanations
-            </div>
-            <div style='font-size:.92rem;color:#e2e8f0;font-weight:600;margin-bottom:.4rem'>
-                L'IA explique son raisonnement pour ce patient
-            </div>
-            <div style='font-size:.83rem;color:#64748b;line-height:1.7'>
-                SHAP décompose la prédiction <strong style='color:{pred_color}'>{info[0]}</strong>
-                variable par variable. Chaque barre indique <em>dans quelle mesure</em> et
-                <em>dans quel sens</em> cette variable a influencé le diagnostic —
-                rendant l'IA <strong style='color:#a78bfa'>totalement transparente</strong>
-                et auditée cliniquement.
-            </div>
-            <div style='margin-top:.9rem;display:flex;gap:1.5rem;flex-wrap:wrap'>
-                <span><span style='display:inline-block;width:14px;height:14px;
-                    background:{pred_color};border-radius:3px;vertical-align:middle;
-                    margin-right:.4rem'></span>
-                    <span style='font-size:.78rem;color:#94a3b8'>Augmente le risque</span></span>
-                <span><span style='display:inline-block;width:14px;height:14px;
-                    background:#3b82f6;border-radius:3px;vertical-align:middle;
-                    margin-right:.4rem'></span>
-                    <span style='font-size:.78rem;color:#94a3b8'>Diminue le risque</span></span>
-                <span><span style='font-size:.78rem;color:#64748b'>
-                    Valeur de base : E[f(X)] =
-                    {get_expected_value(explainer, pred):.3f}</span></span>
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-        # ── Calcul SHAP pour ce patient spécifique ──────────
-        with st.spinner("🔬 Calcul des valeurs SHAP individuelles…"):
-            patient_shap = explainer.shap_values(Xns)
-
-        sv_patient_pred = get_shap_for_class(patient_shap, pred)[0]
-        patient_data_arr = Xn.values[0]
-
-        # ── Ligne 1 : Waterfall + Importance globale ────────
-        shap_col1, shap_col2 = st.columns([1.35, 1], gap="large")
-
-        with shap_col1:
-            st.markdown(f"""
-            <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                        text-transform:uppercase;color:#8b5cf6;margin-bottom:.6rem'>
-                📊 Explication individuelle — Classe prédite : {info[0]}
-            </div>""", unsafe_allow_html=True)
-
-            fig_wf = plot_shap_waterfall_patient(
-                explainer, patient_shap, pred,
-                patient_data_arr, fc, info[0], pred_color
-            )
-            st.pyplot(fig_wf, use_container_width=True)
-            plt.close(fig_wf)
-
-            st.markdown("""
-            <div style='font-size:.75rem;color:#475569;margin-top:.3rem;line-height:1.6;
-                        padding:.6rem .9rem;background:#0d1523;border-radius:8px'>
-                <strong style='color:#64748b'>Comment lire :</strong>
-                Chaque barre = contribution d'une variable à la prédiction finale.
-                La valeur entre parenthèses est la valeur réelle du patient pour cette variable.
-                Le total des barres s'accumule de la valeur de base vers la prédiction finale.
-            </div>""", unsafe_allow_html=True)
-
-        with shap_col2:
-            st.markdown(f"""
-            <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                        text-transform:uppercase;color:#8b5cf6;margin-bottom:.6rem'>
-                🏆 Importance Globale des Variables (SHAP)
-            </div>""", unsafe_allow_html=True)
-
-            fig_imp = plot_shap_global_importance(shap_values, fc, n_classes, pred_color)
-            st.pyplot(fig_imp, use_container_width=True)
-            plt.close(fig_imp)
-
-            st.markdown("""
-            <div style='font-size:.75rem;color:#475569;margin-top:.3rem;line-height:1.6;
-                        padding:.6rem .9rem;background:#0d1523;border-radius:8px'>
-                <strong style='color:#64748b'>Comment lire :</strong>
-                Importance moyenne sur l'ensemble du jeu de test (200 patients).
-                Variables surlignées = les plus déterminantes pour tous les diagnostics.
-            </div>""", unsafe_allow_html=True)
-
-        # ── Insights médicaux automatiques ──────────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:.8rem 0 .6rem'>
-            🧠 Insights Médicaux Générés par SHAP
-        </div>""", unsafe_allow_html=True)
-
-        insights = generate_shap_insights(sv_patient_pred, fc, pred, info[0])
-        insight_cols = st.columns(len(insights), gap="medium")
-        for col_i, (icon, title, text) in zip(insight_cols, insights):
-            with col_i:
-                st.markdown(f"""
-                <div class='shap-insight-card'>
-                    <div class='shap-insight-icon'>{icon}</div>
-                    <div>
-                        <div class='shap-insight-title'>{title}</div>
-                        <div class='shap-insight-text'>{text}</div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
-
-        # ── SHAP Summary Beeswarm (population) ─────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:1.5rem 0 .6rem'>
-            🌡️ Distribution SHAP — Vue Population (jeu de test)
-        </div>""", unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class='panel p-violet' style='margin-bottom:1rem'>
-            <div class='panel-title'>📖 Interprétation du graphique population</div>
-            <div class='panel-body'>
-                Chaque point représente <strong>un patient du jeu de test</strong>.
-                La couleur indique la valeur de la variable pour ce patient
-                (<span style='color:#ef4444;font-weight:700'>rouge = élevée</span>,
-                <span style='color:#3b82f6;font-weight:700'>bleu = faible</span>).
-                La position horizontale montre si la variable pousse la prédiction vers
-                une classe supérieure (droite) ou inférieure (gauche).
-                Un nuage rouge à droite signifie que les valeurs hautes de cette variable
-                augmentent fortement le risque d'obésité.
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-        with st.spinner("📡 Génération du SHAP Summary Plot…"):
-            fig_bee = plot_shap_beeswarm(shap_values, Xtes_sample, fc, n_classes)
-        st.pyplot(fig_bee, use_container_width=True)
-        plt.close(fig_bee)
-
-        # ── Tableau SHAP du patient ─────────────────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:1.5rem 0 .6rem'>
-            📋 Tableau Détaillé des Valeurs SHAP — Ce Patient
-        </div>""", unsafe_allow_html=True)
-
-        shap_df = pd.DataFrame({
-            "Variable":       [FEATURE_LABELS.get(f, f) for f in fc],
-            "Valeur Patient": [f"{v:.3f}" for v in patient_data_arr],
-            "SHAP":           sv_patient_pred,
-            "|SHAP|":         np.abs(sv_patient_pred),
-            "Sens":           ["↑ Augmente" if v > 0 else "↓ Diminue" for v in sv_patient_pred],
-        }).sort_values("|SHAP|", ascending=False).reset_index(drop=True)
-        shap_df["SHAP"]  = shap_df["SHAP"].round(4)
-        shap_df["|SHAP|"] = shap_df["|SHAP|"].round(4)
-
-        # Colorier la colonne Sens
-        def color_sens(val):
-            if "↑" in str(val): return "color: #ef4444; font-weight: 700"
-            if "↓" in str(val): return "color: #3b82f6; font-weight: 700"
-            return ""
-        def color_shap(val):
-            try:
-                v = float(val)
-                if v > 0.01:  return "color: #fca5a5; font-weight: 700"
-                if v < -0.01: return "color: #93c5fd; font-weight: 700"
-            except: pass
-            return "color: #64748b"
-
-        styled = (shap_df.style
-                  .applymap(color_sens, subset=["Sens"])
-                  .applymap(color_shap, subset=["SHAP"])
-                  .background_gradient(subset=["|SHAP|"], cmap="Purples"))
-        st.dataframe(styled, use_container_width=True, height=420)
-
-        # ── Note de clôture SHAP ────────────────────────────
-        st.markdown(f"""
-        <div style='background:#0d1523;border:1px solid rgba(139,92,246,.18);
-                    border-radius:12px;padding:1.2rem 1.6rem;margin-top:1rem;
-                    display:flex;align-items:flex-start;gap:1rem'>
-            <div style='font-size:1.6rem;flex-shrink:0'>🏥</div>
-            <div>
-                <div style='font-size:.85rem;font-weight:700;color:#c4b5fd;margin-bottom:.3rem'>
-                    Interprétabilité clinique certifiée — SHAP + {algo}
-                </div>
-                <div style='font-size:.79rem;color:#475569;line-height:1.65'>
-                    Ce diagnostic s'appuie sur un modèle {ALGO_ICONS[algo]} <strong style='color:#94a3b8'>{algo}</strong>
-                    atteignant <strong style='color:#00d4b4'>{acc*100:.1f}% d'accuracy</strong> (F1 = {f1*100:.1f}%).
-                    Les valeurs SHAP garantissent la traçabilité de chaque décision —
-                    conformément aux exigences de l'IA médicale explicable (XAI).
-                    Les 3 facteurs les plus décisifs pour ce patient sont :
-                    <strong style='color:#e2e8f0'>
-                        {", ".join([FEATURE_LABELS.get(fc[i], fc[i])
-                                    for i in np.argsort(np.abs(sv_patient_pred))[::-1][:3]])}
-                    </strong>.
-                </div>
-            </div>
+        <div style='background:#0d1a2e;border-radius:10px;padding:.85rem 1.3rem;
+                    margin-top:1.5rem;border:1px solid rgba(255,255,255,.05);
+                    font-size:.76rem;color:#1e3456;text-align:center;line-height:1.7'>
+            ⚠️ <strong style='color:#2d4a6a'>Avertissement légal :</strong>
+            Ce diagnostic IA est à des fins éducatives uniquement.
+            Il ne se substitue pas à l'évaluation clinique d'un professionnel de santé qualifié.
         </div>""", unsafe_allow_html=True)
