@@ -32,12 +32,39 @@
 
 ## Description du projet
 
-Ce projet est un **outil clinique d'aide à la décision** développé pour aider les médecins à estimer le **niveau de risque d'obésité** de leurs patients en se basant sur leurs habitudes alimentaires et leurs conditions physiques.
+Ce projet vise à développer une **application d’aide à la décision médicale** permettant d’estimer le **niveau de risque d’obésité** d’un patient à partir de ses habitudes alimentaires et de ses caractéristiques physiques. L’objectif est de démontrer comment les techniques de **machine learning** peuvent être utilisées pour analyser des données liées au mode de vie et fournir des prédictions utiles pouvant soutenir l’évaluation du risque d’obésité.
 
-La solution repose sur des modèles de **machine learning interprétables** (explicabilité via SHAP) et propose une interface web intuitive permettant une saisie facile des données patients et une visualisation claire des prédictions et de leurs explications.
+L’application exploite un dataset provenant de l’**UCI Machine Learning Repository**, qui contient des informations sur les habitudes alimentaires, l’activité physique, les comportements quotidiens et certaines caractéristiques physiques des individus. À partir de ces données, plusieurs modèles de **classification supervisée** sont entraînés afin de prédire l’un des **sept niveaux d’obésité** présents dans le dataset.
+
+Le projet suit une **pipeline complète de data science**, comprenant plusieurs étapes importantes :
+
+- **Analyse exploratoire des données (EDA)** afin de comprendre la structure du dataset, identifier les relations entre les variables et détecter d’éventuelles anomalies.
+- **Prétraitement des données**, incluant l’encodage des variables catégorielles, le traitement des valeurs aberrantes et l’optimisation de l’utilisation mémoire.
+- **Entraînement et comparaison de plusieurs modèles de machine learning** (Random Forest, XGBoost et LightGBM) afin d’identifier le modèle offrant les meilleures performances.
+- **Évaluation des modèles** à l’aide de métriques adaptées aux problèmes de classification multiclasses telles que l’accuracy, le F1-score et le ROC-AUC.
+
+Une dimension essentielle du projet est l’**explicabilité du modèle**. Dans un contexte médical, il est important que les prédictions puissent être comprises et interprétées. Pour cela, la méthode **SHAP (SHapley Additive exPlanations)** est utilisée afin d’expliquer l’influence de chaque variable sur les prédictions du modèle, à la fois au niveau global et au niveau individuel.
+
+Afin de rendre l’outil facilement utilisable, une **interface web interactive développée avec Streamlit** permet aux utilisateurs de saisir les informations d’un patient et d’obtenir instantanément une estimation du niveau d’obésité ainsi que des visualisations expliquant les facteurs ayant contribué à cette prédiction.
+
+Le projet intègre également plusieurs bonnes pratiques d’ingénierie logicielle et de **MLOps**, notamment des **tests automatisés**, un **pipeline CI/CD avec GitHub Actions** et une **conteneurisation avec Docker**, afin d’assurer la reproductibilité, la fiabilité et la facilité de déploiement de l’application.
 
 **Dataset utilisé :**
 [UCI — Estimation of Obesity Levels Based on Eating Habits and Physical Condition](https://archive.ics.uci.edu/dataset/544/estimation+of+obesity+levels+based+on+eating+habits+and+physical+condition)
+
+---
+
+## Objectifs du projet
+
+Les principaux objectifs de ce projet sont les suivants :
+
+- Développer un **modèle de machine learning capable de prédire le niveau d’obésité** à partir des habitudes alimentaires et des caractéristiques physiques d’un individu.
+- Réaliser une **analyse exploratoire approfondie des données** afin de comprendre les relations entre les variables et identifier les facteurs associés à l’obésité.
+- Comparer plusieurs **algorithmes de classification** afin de sélectionner le modèle le plus performant.
+- Intégrer des techniques d’**explicabilité (SHAP)** pour rendre les prédictions du modèle compréhensibles et transparentes.
+- Concevoir une **interface web interactive** permettant de tester facilement le modèle avec de nouvelles données.
+- Mettre en place une **pipeline reproductible et professionnelle** incluant tests automatisés, CI/CD et conteneurisation.
+- Appliquer les concepts de **data science, machine learning et développement logiciel** dans le cadre d’un projet pratique complet.
 
 ---
 
@@ -141,7 +168,7 @@ docker run -p 8501:8501 obesity-app
 
 ### Valeurs manquantes
 
-✅ Le dataset ne contient **aucune valeur manquante**. Aucun traitement d'imputation n'a été nécessaire.
+ Le dataset ne contient **aucune valeur manquante**. Aucun traitement d'imputation n'a été nécessaire.
 
 ### Valeurs aberrantes (Outliers)
 
@@ -163,7 +190,7 @@ Le dataset contient **7 niveaux d'obésité** avec une distribution relativement
 | Obesity_Type_II | ~12% |
 | Obesity_Type_III | ~13% |
 
-➡️ La distribution étant globalement équilibrée, **aucun rééchantillonnage n'a été appliqué**. Les poids de classes (`class_weight='balanced'`) ont tout de même été activés dans les modèles pour tenir compte des légères variations.
+ La distribution étant globalement équilibrée, **aucun rééchantillonnage n'a été appliqué**. Les poids de classes (`class_weight='balanced'`) ont tout de même été activés dans les modèles pour tenir compte des légères variations.
 
 ### Corrélations
 
@@ -202,13 +229,13 @@ SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transp
 
 | Rang | Feature | Impact |
 |---|---|---|
-| 1 | Poids (Weight) | Très élevé ➕ |
-| 2 | Fréquence de consommation de légumes (FCVC) | Élevé ➖ |
-| 3 | Activité physique (FAF) | Élevé ➖ |
-| 4 | Consommation de nourriture entre les repas (CAEC) | Moyen |
-| 5 | Historique familial d'obésité (family_history) | Moyen ➕ |
-
-> ✏️ *Mettez à jour ce tableau avec vos résultats SHAP réels.*
+| 1 | Historique familial d'obésité (family_history_with_overweight) | Très élevé ➕ |
+| 2 | Taille (Height) | Élevé  |
+| 3 | Poids (Weight) | Élevé ➕ |
+| 4 | Genre (Gender) | Moyen |
+| 5 | Âge (Age) | Moyen |
+| 6 | Fréquence de consommation de légumes (FCVC) | Faible ➖ |
+| 7 | Consommation d’aliments hypercaloriques (FAVC) | Faible ➕ |
 
 Les explications SHAP sont **directement accessibles depuis l'interface** Streamlit, à la fois au niveau global (population) et au niveau individuel (par patient).
 
@@ -236,9 +263,7 @@ def optimize_memory(df):
 
 | Avant optimisation | Après optimisation | Réduction |
 |---|---|---|
-| ~X.X MB | ~X.X MB | ~50% |
-
-> ✏️ *Remplacez par les valeurs mesurées dans votre notebook.*
+| ~0.20 MB | ~0.08 MB | ~59.2% |
 
 ---
 
@@ -248,9 +273,9 @@ def optimize_memory(df):
 
 Les tests sont définis dans `tests/test_data_processing.py` et couvrent :
 
-- ✅ Vérification de la gestion des valeurs manquantes
-- ✅ Vérification de la fonction `optimize_memory(df)`
-- ✅ Vérification du chargement du modèle et de la génération de prédictions
+-  Vérification de la gestion des valeurs manquantes
+-  Vérification de la fonction `optimize_memory(df)`
+-  Vérification du chargement du modèle et de la génération de prédictions
 
 ```bash
 # Lancer les tests manuellement
@@ -286,7 +311,7 @@ DataFrame and print the memory usage before and after."
 
 | Critère | Évaluation |
 |---|---|
-| Précision du code généré | ✅ Très bonne |
+| Précision du code généré | Très bonne |
 | Nécessité d'ajustements | Mineure (ajout gestion colonnes catégorielles) |
 | Gain de temps estimé | ~70% |
 
