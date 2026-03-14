@@ -168,7 +168,7 @@ docker run -p 8501:8501 obesity-app
 
 ### Valeurs manquantes
 
-✅ Le dataset ne contient **aucune valeur manquante**. Aucun traitement d'imputation n'a été nécessaire.
+ Le dataset ne contient **aucune valeur manquante**. Aucun traitement d'imputation n'a été nécessaire.
 
 ### Valeurs aberrantes (Outliers)
 
