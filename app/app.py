@@ -17,7 +17,7 @@ from sklearn.metrics import (
     classification_report, precision_score, recall_score,
 )
 
-# ═══════════════════════════════════════════════════════════
+ ═══════════════════════════════════════════════════════════
 #  PAGE CONFIG
 # ═══════════════════════════════════════════════════════════
 st.set_page_config(
