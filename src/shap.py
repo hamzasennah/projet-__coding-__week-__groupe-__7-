@@ -67,4 +67,23 @@ def generate_shap_plots():
     plt.close()
     print(f"✅ Sauvegardé → {path1}")
 
+# ── Bar plot ──────────────────────────────────────────────────────────
+    print("📊 Génération du SHAP bar plot...")
+    plt.figure()
+    if isinstance(shap_values, list):
+        mean_shap = np.mean([np.abs(sv) for sv in shap_values], axis=0)
+    else:
+        mean_shap = np.abs(shap_values)
+
+    shap.summary_plot(
+        mean_shap,
+        X_test[:200],
+        feature_names=feature_names,
+        plot_type='bar',
+        show=False
+    )
+    path2 = os.path.join(SAVE_DIR, 'shap_bar.png')
+    plt.savefig(path2, bbox_inches='tight', dpi=150)
+    plt.close()
+    print(f"✅ Sauvegardé → {path2}")
 
