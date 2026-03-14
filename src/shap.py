@@ -52,4 +52,19 @@ def generate_shap_plots():
     print("🔍 Calcul des SHAP values (200 samples)...")
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_test[:200])
+# ── Beeswarm ──────────────────────────────────────────────────────────
+    print("📊 Génération du SHAP summary plot...")
+    plt.figure()
+    shap.summary_plot(
+        shap_values,
+        X_test[:200],
+        feature_names=feature_names,
+        show=False,
+        max_display=10
+    )
+    path1 = os.path.join(SAVE_DIR, 'shap_summary.png')
+    plt.savefig(path1, bbox_inches='tight', dpi=150)
+    plt.close()
+    print(f"✅ Sauvegardé → {path1}")
+
 
