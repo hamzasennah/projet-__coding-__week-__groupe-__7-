@@ -190,7 +190,7 @@ Le dataset contient **7 niveaux d'obésité** avec une distribution relativement
 | Obesity_Type_II | ~12% |
 | Obesity_Type_III | ~13% |
 
-➡️ La distribution étant globalement équilibrée, **aucun rééchantillonnage n'a été appliqué**. Les poids de classes (`class_weight='balanced'`) ont tout de même été activés dans les modèles pour tenir compte des légères variations.
+ La distribution étant globalement équilibrée, **aucun rééchantillonnage n'a été appliqué**. Les poids de classes (`class_weight='balanced'`) ont tout de même été activés dans les modèles pour tenir compte des légères variations.
 
 ### Corrélations
 
