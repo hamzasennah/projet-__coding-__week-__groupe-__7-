@@ -315,7 +315,7 @@ Le prompt engineering a permis de générer rapidement un squelette de code fonc
 
 ---
 
-## ✅ Checklist de livraison
+## Checklist de livraison
 
 - [x] Code professionnel et structuré
 - [x] Analyse exploratoire documentée (`notebooks/eda.ipynb`)
@@ -330,8 +330,6 @@ Le prompt engineering a permis de générer rapidement un squelette de code fonc
 - [x] README complet répondant aux questions critiques
 
 ---
-
-## 👥 Équipe
 
 Projet réalisé par le **Groupe 7** — Coding Week, Centrale Casablanca (Mars 2026)
 
