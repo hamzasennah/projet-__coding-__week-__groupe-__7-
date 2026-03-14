@@ -495,8 +495,8 @@ MTRANS_MAP = {"Automobile":0,"Vélo":1,"Moto":2,"Transport en commun":3,"Marche"
 ROLES       = ["👩‍⚕️  Infirmière — Saisie Patient","👨‍⚕️  Médecin — Analyse & Diagnostic"]
 NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique"]
 DOC_PAGES   = ["🏥  Tableau de Bord","📊  Exploration Clinique",
-               "📈  Analyse Statistique","🤖  Entraînement & Évaluation",
-               "⚖️  Comparaison des Modèles","🩺  Diagnostic IA"]
+               "📈  Analyse Statistique"
+               ]
 PALETTE     = ["#0ea5e9","#6366f1","#10b981","#f59e0b","#f43f5e","#8b5cf6","#f97316","#14b8a6"]
 
 
@@ -943,187 +943,174 @@ elif is_nurse and page == NURSE_PAGES[1]:
 # ╔═══════════════════════════════════════════════════════════╗
 #  DOCTOR PAGE 1 — Tableau de Bord
 # ╚═══════════════════════════════════════════════════════════╝
+# ╔═══════════════════════════════════════════════════════════╗
+#  DOCTOR PAGE 1 — Tableau de Bord Simplifié
+# ╚═══════════════════════════════════════════════════════════╝
 elif is_doc and page == DOC_PAGES[0]:
-    st.markdown(f"""
+    st.markdown("""
     <div class='banner banner-doctor'>
         <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-title'>Tableau de Bord Clinique</div>
-        <div class='banner-sub'>Vue d'ensemble — {len(df):,} patients · 7 classes d'obésité · 3 algorithmes</div>
-        <span class='banner-badge'>population-study</span>
-        <span class='banner-badge'>ML-classification</span>
-        <span class='banner-badge'>groupe-7</span>
+        <div class='banner-title'>Tableau de Bord - Compteur Patients</div>
+        <div class='banner-sub'>Gestion simple du flux de patients dans la clinique</div>
+        <span class='banner-badge'>compteur</span>
+        <span class='banner-badge'>flux-patients</span>
     </div>""", unsafe_allow_html=True)
 
-    imc_vals = df["Weight"]/(df["Height"]**2)
-    obese    = df[df["NObeyesdad"].isin([2,3,4])].shape[0]
+    # Initialisation du compteur
+    if 'patient_counter' not in st.session_state:
+        st.session_state.patient_counter = 0
 
-    # ── KPIs ──
-    st.markdown(f"""
-    <div class='kpi-grid'>
-        <div class='kpi-card kc-sky'>
-            <div class='kpi-num'>{len(df):,}</div>
-            <div class='kpi-lbl'>👤 Patients</div>
-        </div>
-        <div class='kpi-card kc-indigo'>
-            <div class='kpi-num'>{df.shape[1]-1}</div>
-            <div class='kpi-lbl'>🔬 Variables</div>
-        </div>
-        <div class='kpi-card kc-violet'>
-            <div class='kpi-num'>{df["NObeyesdad"].nunique()}</div>
-            <div class='kpi-lbl'>📊 Classes IMC</div>
-        </div>
-        <div class='kpi-card kc-rose'>
-            <div class='kpi-num'>{obese:,}</div>
-            <div class='kpi-lbl'>⚠️ Cas Obésité</div>
-        </div>
-        <div class='kpi-card kc-amber'>
-            <div class='kpi-num'>{round(imc_vals.mean(),1)}</div>
-            <div class='kpi-lbl'>📏 IMC Moyen</div>
-        </div>
-        <div class='kpi-card kc-emerald'>
-            <div class='kpi-num'>{round(df["Age"].mean(),1)}</div>
-            <div class='kpi-lbl'>🗓️ Âge Moyen</div>
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-    # ── SALLE D'ATTENTE WIDGET ──
-    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Gestion de la Salle d'Attente</div>",
-                unsafe_allow_html=True)
-
-    wa_col1, wa_col2, wa_col3 = st.columns([1, 1, 2], gap="medium")
-
-    with wa_col1:
-        n_wait = st.session_state["waiting"]
-        if n_wait <= 3:    ws_cls,ws_txt = "ws-low","Flux normal"
-        elif n_wait <= 8:  ws_cls,ws_txt = "ws-mid","Attente modérée"
-        else:              ws_cls,ws_txt = "ws-high","Salle chargée"
-
-        st.markdown(f"""
-        <div class='wait-card'>
-            <div class='wait-title'>🏥 Patients en attente</div>
-            <div class='wait-num'>{n_wait}</div>
-            <div class='wait-sub'>
-                <span class='wait-status {ws_cls}'>● {ws_txt}</span>
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-    with wa_col2:
-        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
-        b1, b2 = st.columns(2)
-        if b1.button("➕ Arrivée", use_container_width=True, key="btn_add"):
-            st.session_state["waiting"] += 1
-            st.rerun()
-        if b2.button("✅ Sortie", use_container_width=True, key="btn_sub"):
-            if st.session_state["waiting"] > 0:
-                st.session_state["waiting"] -= 1
-            st.rerun()
-
-        manual_n = st.number_input("Définir manuellement", min_value=0, max_value=50,
-                                    value=st.session_state["waiting"], step=1, key="wait_manual")
-        if manual_n != st.session_state["waiting"]:
-            st.session_state["waiting"] = manual_n
-            st.rerun()
-
-    with wa_col3:
-        # Mini historique visuel
-        n_cur = st.session_state["waiting"]
-        max_slots = 20
-        filled = min(n_cur, max_slots)
-        dots = ""
-        for i in range(max_slots):
-            if i < filled:
-                if n_cur <= 3: color = "#34d399"
-                elif n_cur <= 8: color = "#fbbf24"
-                else: color = "#f43f5e"
-                dots += f"<span style='display:inline-block;width:22px;height:22px;border-radius:50%;background:{color};margin:3px;opacity:.85'></span>"
-            else:
-                dots += "<span style='display:inline-block;width:22px;height:22px;border-radius:50%;background:#172847;margin:3px;border:1px solid #1e3456'></span>"
-        st.markdown(f"""
-        <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;
-                    padding:1.2rem 1.4rem;'>
-            <div style='font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-                        color:#3a5a7a;margin-bottom:.8rem'>Capacité salle ({max_slots} places)</div>
-            <div style='line-height:1.4'>{dots}</div>
-            {"<div style='font-size:.75rem;color:#f43f5e;margin-top:.6rem;font-weight:600'>⚠️ Salle à plus de 50% — prévoir renfort</div>" if n_cur > max_slots//2 else ""}
-        </div>""", unsafe_allow_html=True)
-
-    # ── Charts ──
-    col1,col2 = st.columns([1.65,1], gap="large")
-
-    with col1:
-        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Répartition des classes cliniques</div>",
-                    unsafe_allow_html=True)
-        counts = df["NObeyesdad"].value_counts().sort_index()
-        fig,ax = dark_fig(8,5)
-        bars   = ax.barh([CLASS_NAMES[i] for i in counts.index],counts.values,
-                         color=[CLASS_HEX[i] for i in counts.index],edgecolor="none",height=.62)
-        for bar,val in zip(bars,counts.values):
-            ax.text(val+6,bar.get_y()+bar.get_height()/2,
-                    f"{val}  ({round(val/len(df)*100,1)}%)",
-                    va="center",fontsize=8.5,color="#4a6080",fontweight="600")
-        ax.set_xlabel("Nombre de patients",fontsize=9,color="#4a6080")
-        ax.spines[["top","right","left"]].set_visible(False)
-        ax.grid(axis="x",alpha=.2,linestyle="--")
-        ax.set_xlim(0,counts.max()*1.32)
-        ax.tick_params(colors="#7a9ab8")
-        plt.tight_layout(); st.pyplot(fig,use_container_width=True)
-
+    # Affichage du compteur principal
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col2:
-        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Genre</div>",
-                    unsafe_allow_html=True)
-        g = df["Gender"].value_counts()
-        fig2,ax2 = dark_fig(4.5,4.5)
-        wedges,texts,autos = ax2.pie(
-            g.values, labels=["Homme" if i==1 else "Femme" for i in g.index],
-            autopct="%1.1f%%", colors=["#0ea5e9","#8b5cf6"],
-            startangle=90, pctdistance=.76,
-            wedgeprops={"edgecolor":"#0d1a2e","linewidth":3},
-        )
-        for t in texts:  t.set_color("#7a9ab8"); t.set_fontsize(11)
-        for a in autos:  a.set_color("white"); a.set_fontsize(10); a.set_fontweight("bold")
-        plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+        st.markdown(f"""
+        <div style='background:linear-gradient(160deg,#0d1a2e,#132237);
+                    border:2px solid #0ea5e9;
+                    border-radius:30px;
+                    padding:3rem 2rem;
+                    text-align:center;
+                    margin:1rem 0 2rem 0;
+                    box-shadow:0 20px 40px rgba(14,165,233,0.2)'>
+            <div style='font-size:.8rem;font-weight:700;letter-spacing:.15em;
+                        text-transform:uppercase;color:#4a6080;margin-bottom:1rem'>
+                Patients en consultation
+            </div>
+            <div style='font-family:"Playfair Display",serif;font-size:7rem;
+                        font-weight:800;color:#e8f4ff;line-height:1;
+                        text-shadow:0 0 30px rgba(14,165,233,0.5)'>
+                {st.session_state.patient_counter}
+            </div>
+            <div style='margin-top:1rem'>
+                <span style='display:inline-block;background:rgba(14,165,233,0.1);
+                           border:1px solid #0ea5e9;border-radius:20px;
+                           padding:.3rem 1rem;font-size:.8rem;color:#7dd3fc'>
+                    ⏱️ Dernière mise à jour
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Distribution de l'IMC par classe</div>",
+    # Boutons de contrôle
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Contrôle du flux</div>",
                 unsafe_allow_html=True)
-    fig3,ax3 = dark_fig(13,4)
-    for i in range(7):
-        vals = (df[df["NObeyesdad"]==i]["Weight"]/df[df["NObeyesdad"]==i]["Height"]**2).dropna()
-        if len(vals)>3:
-            vals.plot.kde(ax=ax3,color=CLASS_HEX[i],linewidth=2.2,label=CLASS_NAMES[i])
-            ax3.fill_between(
-                np.linspace(vals.min(),vals.max(),200),0,
-                [ax3.lines[-1].get_ydata()[j]
-                 for j in np.linspace(0,len(ax3.lines[-1].get_ydata())-1,200,dtype=int)],
-                alpha=.07,color=CLASS_HEX[i])
-    ax3.set_xlabel("IMC (kg/m²)",fontsize=9,color="#4a6080")
-    ax3.set_ylabel("Densité",fontsize=9,color="#4a6080")
-    ax3.spines[["top","right"]].set_visible(False)
-    ax3.grid(alpha=.18,linestyle="--")
-    ax3.legend(fontsize=7.5,ncol=4)
-    plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
+    
+    btn_c1, btn_c2, btn_c3, btn_c4 = st.columns(4, gap="medium")
 
-    # ── Model cards ──
-    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Algorithmes de classification</div>",
-                unsafe_allow_html=True)
-    c1,c2,c3 = st.columns(3, gap="medium")
-    for col,a in zip([c1,c2,c3],ALGO_LIST):
-        col.markdown(f"""
-        <div class='model-card {"best" if a==BEST_ALGO else ""}'>
-            <div class='model-icon'>{ALGO_ICONS[a]}</div>
-            <div class='model-name' style='color:{ALGO_COLORS[a]}'>{a}</div>
-            <div class='model-desc'>{ALGO_DESC[a]}</div>
+    with btn_c1:
+        st.markdown("""
+        <div style='background:#0d1a2e;border:1px solid #0ea5e9;border-radius:16px;
+                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2.2rem;margin-bottom:.5rem'>➕</div>
+            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Nouveau patient</div>
         </div>""", unsafe_allow_html=True)
+        if st.button("Patient arrivé (+1)", use_container_width=True, key="btn_add"):
+            st.session_state.patient_counter += 1
+            st.rerun()
 
-    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Aperçu du dataset (décodé)</div>",
+    with btn_c2:
+        st.markdown("""
+        <div style='background:#0d1a2e;border:1px solid #10b981;border-radius:16px;
+                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2.2rem;margin-bottom:.5rem'>✅</div>
+            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Patient traité</div>
+        </div>""", unsafe_allow_html=True)
+        if st.button("Patient sorti (-1)", use_container_width=True, key="btn_sub"):
+            if st.session_state.patient_counter > 0:
+                st.session_state.patient_counter -= 1
+            st.rerun()
+
+    with btn_c3:
+        st.markdown("""
+        <div style='background:#0d1a2e;border:1px solid #f59e0b;border-radius:16px;
+                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2.2rem;margin-bottom:.5rem'>🔄</div>
+            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Réinitialiser</div>
+        </div>""", unsafe_allow_html=True)
+        if st.button("Remettre à zéro", use_container_width=True, key="btn_reset"):
+            st.session_state.patient_counter = 0
+            st.rerun()
+
+    with btn_c4:
+        st.markdown("""
+        <div style='background:#0d1a2e;border:1px solid #f43f5e;border-radius:16px;
+                    padding:1.5rem;text-align:center;margin-bottom:.5rem'>
+            <div style='font-size:2.2rem;margin-bottom:.5rem'>⚡</div>
+            <div style='font-size:.75rem;color:#4a6080;font-weight:700;
+                        letter-spacing:.06em;text-transform:uppercase'>Action rapide</div>
+        </div>""", unsafe_allow_html=True)
+        quick_add = st.number_input("Ajouter plusieurs", min_value=1, max_value=20, 
+                                     value=1, step=1, key="quick_add", 
+                                     label_visibility="collapsed")
+        if st.button(f"Ajouter {quick_add}", use_container_width=True, key="btn_quick"):
+            st.session_state.patient_counter += quick_add
+            st.rerun()
+
+    # Statistiques simples
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Statistiques du jour</div>",
                 unsafe_allow_html=True)
-    df_disp = decode_df(df)
-    st.markdown(
-        f"<span class='chip chip-sky'>{len(df):,} patients</span>"
-        f"<span class='chip'>{df.shape[1]} colonnes</span>"
-        f"<span class='chip'>12 premières lignes</span>",
-        unsafe_allow_html=True)
-    render_html_table(df_disp, max_rows=12, height=380)
+    
+    col_s1, col_s2, col_s3 = st.columns(3)
+    
+    with col_s1:
+        st.markdown(f"""
+        <div class='kpi-card kc-sky'>
+            <div class='kpi-num'>{st.session_state.patient_counter}</div>
+            <div class='kpi-lbl'>Patients aujourd'hui</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_s2:
+        # Estimation du temps d'attente (5 min par patient)
+        est_time = st.session_state.patient_counter * 5
+        st.markdown(f"""
+        <div class='kpi-card kc-emerald'>
+            <div class='kpi-num'>{est_time} min</div>
+            <div class='kpi-lbl'>Temps d'attente estimé</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_s3:
+        # Capacité (max 20 patients)
+        capacity_pct = min(int(st.session_state.patient_counter / 20 * 100), 100)
+        color = "#34d399" if capacity_pct < 50 else "#fbbf24" if capacity_pct < 80 else "#f43f5e"
+        st.markdown(f"""
+        <div class='kpi-card' style='border-top-color:{color}'>
+            <div class='kpi-num' style='color:{color}'>{capacity_pct}%</div>
+            <div class='kpi-lbl'>Capacité utilisée</div>
+        </div>
+        """, unsafe_allow_html=True)
 
+    # Barre de progression visuelle
+    st.markdown("<div class='sec-head'><div class='dot dot-sky'></div>Capacité de la salle d'attente (20 places)</div>",
+                unsafe_allow_html=True)
+    
+    progress = min(st.session_state.patient_counter / 20, 1.0)
+    if progress < 0.3:
+        bar_color = "#34d399"
+    elif progress < 0.7:
+        bar_color = "#fbbf24"
+    else:
+        bar_color = "#f43f5e"
+    
+    st.markdown(f"""
+    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;padding:1.5rem'>
+        <div style='display:flex;justify-content:space-between;margin-bottom:.8rem'>
+            <span style='color:#4a6080;font-size:.8rem'>Occupation</span>
+            <span style='color:{bar_color};font-weight:700'>{st.session_state.patient_counter}/20</span>
+        </div>
+        <div style='background:#172847;border-radius:10px;height:20px;overflow:hidden'>
+            <div style='width:{progress*100}%;height:100%;background:{bar_color};
+                        border-radius:10px;transition:width .3s'></div>
+        </div>
+        <div style='margin-top:1rem;color:#3a5a7a;font-size:.75rem'>
+            {max(0, 20 - st.session_state.patient_counter)} places disponibles
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── DOCTOR PAGE 2 — Exploration Clinique ────────────────────
 elif is_doc and page == DOC_PAGES[1]:
@@ -1303,128 +1290,8 @@ elif is_doc and page == DOC_PAGES[2]:
         plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
 
 
-# ── DOCTOR PAGE 4 — Entraînement & Évaluation ───────────────
+# ── DOCTOR PAGE 4 — Comparaison des Modèles ─────────────────
 elif is_doc and page == DOC_PAGES[3]:
-    st.markdown(f"""
-    <div class='banner banner-doctor'>
-        <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
-        <div class='banner-title'>Entraînement & Évaluation</div>
-        <div class='banner-sub'>Algorithme : {ALGO_ICONS[algo]} <strong>{algo}</strong>
-            {"&ensp;· ⭐ Meilleur modèle" if algo==BEST_ALGO else ""}</div>
-    </div>""", unsafe_allow_html=True)
-
-    already_trained = algo in st.session_state["trained_algos"]
-
-    if already_trained:
-        st.markdown(f"""
-        <div class='panel p-emerald'>
-            <div class='panel-title'>✅ Modèle déjà entraîné</div>
-            <div class='panel-body'>
-                <strong>{algo}</strong> est en cache. Les résultats s'affichent instantanément.
-                Pour forcer un ré-entraînement, rechargez la page (F5).
-            </div>
-        </div>""", unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class='panel p-sky'>
-            <div class='panel-title'>{ALGO_ICONS[algo]} {algo}</div>
-            <div class='panel-body'>{ALGO_DESC[algo]}</div>
-        </div>""", unsafe_allow_html=True)
-
-    run_btn = st.button(
-        f"{'🔄  Afficher les résultats' if already_trained else f'🚀  Entraîner — {algo}'}",
-        use_container_width=False
-    )
-
-    if run_btn or already_trained:
-        if not already_trained:
-            with st.spinner(f"⏳ Entraînement de {algo} en cours…"):
-                clf,sc_m,fc,acc,f1,prec,rec,cm,cr,_,yte,yp = train_model(algo)
-            st.session_state["trained_algos"].add(algo)
-        else:
-            clf,sc_m,fc,acc,f1,prec,rec,cm,cr,_,yte,yp = train_model(algo)
-
-        st.markdown("<div class='sec-head'><div class='dot dot-emerald'></div>Métriques de performance</div>",
-                    unsafe_allow_html=True)
-        mc = st.columns(4)
-        mc[0].metric("✅ Accuracy",  f"{acc*100:.2f}%")
-        mc[1].metric("📊 F1-Score",  f"{f1*100:.2f}%")
-        mc[2].metric("🎯 Précision", f"{prec*100:.2f}%")
-        mc[3].metric("📡 Rappel",    f"{rec*100:.2f}%")
-
-        lbl = [CLASS_NAMES[i].replace(" ","\n") for i in range(7)]
-        tab1,tab2,tab3,tab4 = st.tabs(["🔲 Matrice de Confusion","📋 Rapport Clinique",
-                                        "📊 Feature Importance","📉 Métriques par Classe"])
-        with tab1:
-            c1,c2 = st.columns(2)
-            with c1:
-                fig,ax = dark_fig(6,5)
-                sns.heatmap(cm,ax=ax,annot=True,fmt="d",
-                            cmap=sns.dark_palette("#0ea5e9",as_cmap=True),
-                            xticklabels=lbl,yticklabels=lbl,
-                            linewidths=.3,linecolor="#07101f")
-                ax.set_xlabel("Prédit",fontsize=9); ax.set_ylabel("Réel",fontsize=9)
-                ax.set_title("Matrice de confusion",fontsize=10,pad=8,color="#dde6f0")
-                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
-                plt.tight_layout(); st.pyplot(fig,use_container_width=True)
-            with c2:
-                cm_n = cm.astype(float)/cm.sum(axis=1)[:,np.newaxis]*100
-                fig2,ax2 = dark_fig(6,5)
-                sns.heatmap(cm_n,ax=ax2,annot=True,fmt=".1f",
-                            cmap=sns.dark_palette("#8b5cf6",as_cmap=True),
-                            xticklabels=lbl,yticklabels=lbl,
-                            linewidths=.3,linecolor="#07101f",
-                            cbar_kws={"label":"%"})
-                ax2.set_xlabel("Prédit",fontsize=9); ax2.set_ylabel("Réel",fontsize=9)
-                ax2.set_title("Matrice normalisée (%)",fontsize=10,pad=8,color="#dde6f0")
-                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
-                plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
-
-        with tab2:
-            cr_df = pd.DataFrame(cr).T
-            st.dataframe(
-                cr_df.format("{:.3f}",subset=["precision","recall","f1-score"])
-                if hasattr(cr_df,"format") else cr_df,
-                use_container_width=True)
-
-        with tab3:
-            if hasattr(clf,"feature_importances_"):
-                fi  = pd.DataFrame({"Variable":fc,"Importance":clf.feature_importances_}).sort_values("Importance")
-                fig3,ax3 = dark_fig(9,6)
-                med = fi["Importance"].median()
-                ax3.barh(fi["Variable"],fi["Importance"],
-                         color=[ALGO_COLORS[algo] if v>med else "#1e3456" for v in fi["Importance"]],
-                         edgecolor="none",height=.62)
-                for i,(f_,v) in enumerate(zip(fi["Variable"],fi["Importance"])):
-                    ax3.text(v+.001,i,f"{v:.4f}",va="center",fontsize=8,color="#4a6080",fontweight="600")
-                ax3.spines[["top","right","left"]].set_visible(False)
-                ax3.grid(axis="x",alpha=.18,linestyle="--")
-                ax3.set_title(f"Importance — {algo}",fontsize=11,pad=10,color="#dde6f0")
-                plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
-            else:
-                st.info("Feature importance non disponible pour ce modèle.")
-
-        with tab4:
-            f1_c   = [cr.get(str(i),{}).get("f1-score",0) for i in range(7)]
-            prec_c = [cr.get(str(i),{}).get("precision",0) for i in range(7)]
-            rec_c  = [cr.get(str(i),{}).get("recall",0) for i in range(7)]
-            fig4,ax4 = dark_fig(11,5)
-            xp = np.arange(7); w=.27
-            ax4.bar(xp-w,prec_c,w,label="Précision",color="#0ea5e9",alpha=.9,edgecolor="none")
-            ax4.bar(xp,  rec_c, w,label="Rappel",   color="#14b8a6",alpha=.9,edgecolor="none")
-            ax4.bar(xp+w,f1_c,  w,label="F1-Score", color="#8b5cf6",alpha=.9,edgecolor="none")
-            ax4.set_xticks(xp)
-            ax4.set_xticklabels([CLASS_NAMES[i].replace(" ","\n") for i in range(7)],
-                                fontsize=8.5,color="#7a9ab8")
-            ax4.set_ylim(0,1.12)
-            ax4.spines[["top","right"]].set_visible(False)
-            ax4.grid(axis="y",alpha=.18,linestyle="--")
-            ax4.legend(fontsize=9)
-            plt.tight_layout(); st.pyplot(fig4,use_container_width=True)
-
-
-# ── DOCTOR PAGE 5 — Comparaison des Modèles ─────────────────
-elif is_doc and page == DOC_PAGES[4]:
     st.markdown("""
     <div class='banner banner-doctor'>
         <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
@@ -1502,7 +1369,7 @@ elif is_doc and page == DOC_PAGES[4]:
 
 
 # ── DOCTOR PAGE 6 — Diagnostic IA ───────────────────────────
-elif is_doc and page == DOC_PAGES[5]:
+elif is_doc and page == DOC_PAGES[4]:
     st.markdown(f"""
     <div class='banner banner-doctor'>
         <div class='banner-pre'>👨‍⚕️ Interface Médecin</div>
