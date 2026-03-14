@@ -1,5 +1,5 @@
 import pandas as pd
-import os
+import os 
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
@@ -13,11 +13,12 @@ from lightgbm import LGBMClassifier
 # Load dataset
 # ===============================
 
-data_path = os.path.join(os.path.dirname(__file__), "..", "data", "data_clean.csv")
+
+data_path = os.path.join(os.path.dirname(__file__), '..', 'data' , 'data_clean.csv')
 
 df = pd.read_csv(data_path)
 
-target = "NObeyesdad"
+target = df.columns[-1]
 
 X = df.drop(target, axis=1)
 y = df[target]
@@ -31,8 +32,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
     test_size=0.2,
-    random_state=42,
-    stratify=y
+    random_state=42
 )
 
 
@@ -42,16 +42,14 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 models = {
     "RandomForest": RandomForestClassifier(random_state=42),
-    "XGBoost": XGBClassifier(eval_metric="mlogloss", random_state=42),
-    "LightGBM": LGBMClassifier(random_state=42)
+    "XGBoost": XGBClassifier(eval_metric="mlogloss"),
+    "LightGBM": LGBMClassifier()
 }
 
 
 # ===============================
 # Evaluation
 # ===============================
-
-results = []
 
 for name, model in models.items():
 
@@ -67,29 +65,10 @@ for name, model in models.items():
     precision = precision_score(y_test, y_pred, average="weighted")
     recall = recall_score(y_test, y_pred, average="weighted")
     f1 = f1_score(y_test, y_pred, average="weighted")
-    roc_auc = roc_auc_score(y_test, y_proba, multi_class="ovr", average="weighted")
+    roc_auc = roc_auc_score(y_test, y_proba, multi_class="ovr")
 
     print("Accuracy:", accuracy)
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1-score:", f1)
     print("ROC-AUC:", roc_auc)
-
-    results.append([name, accuracy, precision, recall, f1, roc_auc])
-
-
-# ===============================
-# Best Model
-# ===============================
-
-results_df = pd.DataFrame(
-    results,
-    columns=["Model", "Accuracy", "Precision", "Recall", "F1", "ROC-AUC"]
-)
-
-print("\n\nModel Comparison")
-print(results_df)
-
-best_model = results_df.sort_values(by="F1", ascending=False).iloc[0]
-
-print("\nBest Model:", best_model["Model"])
