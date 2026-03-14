@@ -230,8 +230,8 @@ SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transp
 | Rang | Feature | Impact |
 |---|---|---|
 | 1 | Historique familial d'obésité (family_history_with_overweight) | Très élevé ➕ |
-| 2 | Taille (Height) | Élevé ➖ |
-| 3 | Poids (Weight) | Élevé ➖ |
+| 2 | Taille (Height) | Élevé  |
+| 3 | Poids (Weight) | Élevé ➕ |
 | 4 | Genre (Gender) | Moyen |
 | 5 | Âge (Age) | Moyen ➕ |
 | 6 | Fréquence de consommation de légumes (FCVC) | Moyen ➕ |
