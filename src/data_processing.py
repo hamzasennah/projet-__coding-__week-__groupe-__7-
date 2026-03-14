@@ -163,3 +163,84 @@ def optimize_memory(df, category_threshold=0.5, verbose=True):
     """
 
     df = df.copy()
+     start_mem = df.memory_usage(deep=True).sum() / 1024 ** 2
+    print(f"\n{'─'*55}")
+    print(f"  Mémoire AVANT optimisation : {start_mem:.4f} MB")
+    print(f"{'─'*55}")
+
+    report = []
+
+    for col in df.columns:
+        col_type  = df[col].dtype
+        before_mb = df[col].memory_usage(deep=True) / 1024 ** 2
+        converted = False
+
+        # ── 1. Colonnes object ────────────────────────────────
+        if col_type == object:
+            n_unique = df[col].nunique()
+            ratio    = n_unique / len(df)
+
+            if ratio < category_threshold:
+                # Faible cardinalité → category (gain mémoire maximal)
+                df[col]   = df[col].astype('category')
+                converted = True
+            # Sinon on laisse en object (haute cardinalité = texte libre)
+
+        # ── 2. Colonnes category (déjà converties) ───────────
+        elif str(col_type) == 'category':
+            # Déjà optimal, rien à faire
+            pass
+
+        # ── 3. Colonnes numériques entières ──────────────────
+        elif str(col_type)[:3] == 'int':
+            c_min, c_max = df[col].min(), df[col].max()
+
+            if   c_min >= np.iinfo(np.int8).min  and c_max <= np.iinfo(np.int8).max:
+                df[col] = df[col].astype(np.int8)
+            elif c_min >= np.iinfo(np.int16).min and c_max <= np.iinfo(np.int16).max:
+                df[col] = df[col].astype(np.int16)
+            elif c_min >= np.iinfo(np.int32).min and c_max <= np.iinfo(np.int32).max:
+                df[col] = df[col].astype(np.int32)
+            else:
+                df[col] = df[col].astype(np.int64)
+            converted = True
+
+        # ── 4. Colonnes numériques flottantes ─────────────────
+        elif str(col_type)[:5] == 'float':
+            c_min, c_max = df[col].min(), df[col].max()
+
+            # Note : float16 perd beaucoup de précision → on commence à float32
+            if   c_min >= np.finfo(np.float32).min and c_max <= np.finfo(np.float32).max:
+                df[col] = df[col].astype(np.float32)
+            else:
+                df[col] = df[col].astype(np.float64)
+            converted = True
+
+        after_mb = df[col].memory_usage(deep=True) / 1024 ** 2
+
+        if verbose:
+            arrow   = "→" if converted else " "
+            gain    = before_mb - after_mb
+            gain_pct = (gain / before_mb * 100) if before_mb > 0 else 0
+            report.append({
+                "Colonne":    col,
+                "Type avant": str(col_type),
+                "Type après": str(df[col].dtype),
+                "Avant (KB)": round(before_mb * 1024, 2),
+                "Après (KB)": round(after_mb  * 1024, 2),
+                "Gain %":     f"{gain_pct:.1f}%",
+            })
+
+    end_mem = df.memory_usage(deep=True).sum() / 1024 ** 2
+
+    print(f"\n  Mémoire APRÈS optimisation : {end_mem:.4f} MB")
+    print(f"  Réduction totale           : {(start_mem - end_mem):.4f} MB  "
+          f"({100 * (start_mem - end_mem) / start_mem:.1f}%)")
+    print(f"{'─'*55}\n")
+
+    if verbose and report:
+        report_df = pd.DataFrame(report)
+        print(report_df.to_string(index=False))
+        print()
+
+    return df
