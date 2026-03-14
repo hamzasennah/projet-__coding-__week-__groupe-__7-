@@ -359,5 +359,5 @@ Le prompt engineering a permis de générer rapidement un squelette de code fonc
 Projet réalisé par le **Groupe 7** — Coding Week, Centrale Casablanca (Mars 2026)
 
 <p align="center">
-  Réalisé avec ❤️ par le <strong>Groupe 7</strong> · Coding Week · Centrale Casablanca · Mars 202
+  Réalisé avec ❤️ par le <strong>Groupe 7</strong> · Coding Week · Centrale Casablanca · Mars 2026
 </p>
