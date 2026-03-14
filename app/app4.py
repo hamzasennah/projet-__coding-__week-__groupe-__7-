@@ -2,13 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-import shap
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -16,8 +13,10 @@ from sklearn.metrics import (
     accuracy_score, f1_score, confusion_matrix,
     classification_report, precision_score, recall_score,
 )
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 
- ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
 #  PAGE CONFIG
 # ═══════════════════════════════════════════════════════════
 st.set_page_config(
@@ -28,12 +27,13 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════
-#  CSS — DARK PREMIUM MEDICAL
+#  CSS — DARK PREMIUM MEDICAL  (thème forcé, jamais clair)
 # ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap');
 
+/* ── FORCE DARK ON EVERY STREAMLIT ELEMENT ── */
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
@@ -61,6 +61,7 @@ st.markdown("""
     --shadow:    0 0 30px rgba(0,212,180,.12);
 }
 
+/* Root overrides */
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stApp"],
@@ -73,6 +74,7 @@ html, body,
     font-family: 'DM Sans', sans-serif !important;
 }
 
+/* Sidebar */
 section[data-testid="stSidebar"] {
     background: #111827 !important;
     border-right: 1px solid rgba(255,255,255,.08) !important;
@@ -92,12 +94,15 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     border-color: rgba(0,212,180,.25) !important;
 }
 
+/* Main container */
 .main .block-container { padding: 1.8rem 2.2rem 3rem; max-width: 1500px; }
 
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #111827; }
 ::-webkit-scrollbar-thumb { background: #222d42; border-radius: 3px; }
 
+/* Inputs & selects */
 [data-baseweb="select"] > div,
 [data-baseweb="input"] > div,
 .stTextInput > div > div,
@@ -121,10 +126,12 @@ label, .stSelectbox label, .stSlider label,
     font-size: .84rem !important;
 }
 
+/* Sliders */
 .stSlider [data-baseweb="thumb"] { background: #00d4b4 !important; border-color: #00d4b4 !important; }
 .stSlider [data-baseweb="track-fill"] { background: #00d4b4 !important; }
 .stSlider [data-baseweb="track"] { background: #222d42 !important; }
 
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
     background: #111827 !important;
     border: 1px solid rgba(255,255,255,.08) !important;
@@ -148,6 +155,7 @@ label, .stSelectbox label, .stSlider label,
 .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
 .stTabs [data-baseweb="tab-border"]    { display: none !important; }
 
+/* Metrics */
 div[data-testid="metric-container"] {
     background: #111827 !important;
     border: 1px solid rgba(255,255,255,.08) !important;
@@ -167,6 +175,7 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-size: 1.6rem !important;
 }
 
+/* Button */
 .stButton > button {
     background: linear-gradient(135deg,#00a896,#00d4b4) !important;
     color: #0a0f1e !important;
@@ -186,6 +195,7 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     box-shadow: 0 8px 28px rgba(0,212,180,.35) !important;
 }
 
+/* DataFrames */
 .stDataFrame, [data-testid="stDataFrame"] {
     background: #111827 !important;
     border-radius: 10px !important;
@@ -213,6 +223,7 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-family: 'DM Sans', sans-serif !important;
 }
 
+/* Alerts / expander */
 .stAlert, [data-testid="stNotification"] {
     background: #111827 !important;
     border-color: rgba(255,255,255,.1) !important;
@@ -223,23 +234,28 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     color: #e2e8f0 !important;
 }
 
+/* Spinner */
 .stSpinner > div { border-top-color: #00d4b4 !important; }
 
+/* Number input arrows */
 .stNumberInput button {
     background: #222d42 !important;
     color: #94a3b8 !important;
     border-color: rgba(255,255,255,.1) !important;
 }
 
+/* Multiselect */
 [data-baseweb="tag"] { background: #222d42 !important; }
 [data-baseweb="tag"] span { color: #e2e8f0 !important; }
 
+/* Divider */
 hr { border-color: rgba(255,255,255,.08) !important; }
 
 /* ══════════════════════════════
    CUSTOM COMPONENTS
 ══════════════════════════════ */
 
+/* Page banner */
 .page-banner {
     background: #111827;
     border: 1px solid rgba(255,255,255,.08);
@@ -278,6 +294,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
     font-family: 'JetBrains Mono',monospace;
 }
 
+/* KPI grid */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
@@ -315,6 +332,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
     text-transform: uppercase; color: #64748b;
 }
 
+/* Section head */
 .sec-head {
     font-family: 'DM Serif Display',serif;
     font-size: 1.12rem; color: #f8fafc;
@@ -327,8 +345,8 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .dot-teal   { background:#00d4b4; box-shadow:0 0 8px #00d4b4; }
 .dot-nurse  { background:#06b6d4; box-shadow:0 0 8px #06b6d4; }
 .dot-doctor { background:#8b5cf6; box-shadow:0 0 8px #8b5cf6; }
-.dot-violet { background:#8b5cf6; box-shadow:0 0 8px #8b5cf6; }
 
+/* Panel */
 .panel {
     background: #111827;
     border: 1px solid rgba(255,255,255,.08);
@@ -355,6 +373,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .p-doctor .panel-title { color: #a78bfa; }
 .panel-body { font-size: .84rem; color: #94a3b8; line-height: 1.6; }
 
+/* Model card */
 .model-card {
     background: #111827;
     border: 1px solid rgba(255,255,255,.08);
@@ -381,6 +400,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .model-score { font-family:'DM Serif Display',serif; font-size:1.8rem; margin:.5rem 0; }
 .model-desc  { font-size: .77rem; color: #64748b; line-height: 1.5; }
 
+/* Result box */
 .result-box {
     border-radius: 16px; padding: 2.2rem;
     text-align: center; margin: 1rem 0;
@@ -402,6 +422,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .result-imc  { font-family:'JetBrains Mono',monospace; font-size:.87rem; color:#64748b; margin:.5rem 0; }
 .result-desc { font-size:.87rem; color:#94a3b8; margin-top:.5rem; }
 
+/* Rec card */
 .rec-card {
     background: #111827;
     border: 1px solid rgba(255,255,255,.08);
@@ -418,6 +439,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .rec-title { font-weight:700; font-size:.87rem; color:#e2e8f0; margin-bottom:.2rem; }
 .rec-text  { font-size:.79rem; color:#64748b; line-height:1.55; }
 
+/* IMC live */
 .imc-live {
     border-radius: 12px; padding: 1.2rem;
     text-align: center; margin-top: .8rem;
@@ -428,6 +450,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .imc-value { font-family:'DM Serif Display',serif; font-size:2.6rem; line-height:1.1; margin:.2rem 0; }
 .imc-cat   { font-size:.82rem; font-weight:700; margin-top:2px; }
 
+/* Chip */
 .chip {
     display: inline-flex; align-items: center; gap: .3rem;
     background: #1a2235; color: #94a3b8;
@@ -436,8 +459,8 @@ hr { border-color: rgba(255,255,255,.08) !important; }
     margin: .2rem; font-family: 'JetBrains Mono',monospace;
 }
 .chip-teal { background:rgba(0,212,180,.1); color:#00d4b4; border-color:rgba(0,212,180,.25); }
-.chip-violet { background:rgba(139,92,246,.1); color:#a78bfa; border-color:rgba(139,92,246,.25); }
 
+/* Form section */
 .form-section {
     background: #111827;
     border: 1px solid rgba(255,255,255,.08);
@@ -451,6 +474,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .ft-nurse  { color: #06b6d4; }
 .ft-doctor { color: #8b5cf6; }
 
+/* Stat row */
 .stat-row {
     display: flex; justify-content: space-between;
     padding: .4rem 0; border-bottom: 1px solid rgba(255,255,255,.05);
@@ -460,6 +484,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .sk { color: #64748b; font-weight: 500; }
 .sv { color: #e2e8f0; font-weight: 700; font-family:'JetBrains Mono',monospace; font-size:.81rem; }
 
+/* Comparison table custom style */
 .cmp-table { width:100%; border-collapse:collapse; }
 .cmp-table th {
     background: #1a2235; color: #64748b; font-size:.75rem;
@@ -473,24 +498,6 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 .cmp-table tr:hover td { background: #141c2e; }
 .cmp-best  { color:#00d4b4 !important; font-weight:700 !important; }
 .cmp-worst { color:#ef4444 !important; }
-
-/* SHAP specific */
-.shap-legend-item {
-    display: inline-flex; align-items: center; gap: .5rem;
-    margin: .2rem .5rem; font-size: .8rem; color: #94a3b8;
-}
-.shap-dot {
-    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
-}
-.shap-insight-card {
-    background: #0f1928;
-    border: 1px solid rgba(139,92,246,.2);
-    border-radius: 12px; padding: 1.2rem 1.4rem; margin: .4rem 0;
-    display: flex; align-items: flex-start; gap: .9rem;
-}
-.shap-insight-icon { font-size: 1.4rem; flex-shrink: 0; }
-.shap-insight-title { font-weight: 700; font-size: .85rem; color: #c4b5fd; margin-bottom: .15rem; }
-.shap-insight-text  { font-size: .79rem; color: #64748b; line-height: 1.55; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -538,30 +545,10 @@ CALC_MAP   = {"Jamais":3,"Parfois":2,"Fréquemment":1,"Toujours":0}
 MTRANS_MAP = {"Automobile":0,"Vélo":1,"Moto":2,"Transport en commun":3,"Marche":4}
 
 ROLES       = ["👩‍⚕️  Infirmière — Saisie Patient","👨‍⚕️  Médecin — Analyse & Diagnostic"]
-NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique","🏥  Tableau de Bord"]
-DOC_PAGES   = ["📊  Exploration Clinique","📈  Analyse Statistique",
-               "⚖️  Comparaison des Modèles","🩺  Diagnostic IA"]
+NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique"]
+DOC_PAGES   = ["🏥  Tableau de Bord","📊  Exploration Clinique","📈  Analyse Statistique",
+               "🤖  Entraînement & Évaluation","⚖️  Comparaison des Modèles","🩺  Diagnostic IA"]
 PALETTE     = ["#00d4b4","#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#f97316","#06b6d4"]
-
-# Labels lisibles pour les features SHAP
-FEATURE_LABELS = {
-    "Gender":                          "Genre",
-    "Age":                             "Âge",
-    "Height":                          "Taille (m)",
-    "Weight":                          "Poids (kg)",
-    "family_history_with_overweight":  "Ant. familiaux obésité",
-    "FAVC":                            "Aliments caloriques (FAVC)",
-    "FCVC":                            "Fréquence légumes (FCVC)",
-    "NCP":                             "Repas/jour (NCP)",
-    "CAEC":                            "Grignotage (CAEC)",
-    "SMOKE":                           "Tabagisme",
-    "CH2O":                            "Eau/jour (L)",
-    "SCC":                             "Surveillance cal. (SCC)",
-    "FAF":                             "Activité physique (j/sem)",
-    "TUE":                             "Temps écran (h/j)",
-    "CALC":                            "Alcool (CALC)",
-    "MTRANS":                          "Transport",
-}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -581,22 +568,10 @@ def dark_fig(w=10, h=5, ncols=1, nrows=1):
     return plt.subplots(nrows,ncols,figsize=(w,h))
 
 
-def set_dark_matplotlib():
-    """Apply dark theme to all matplotlib figures."""
-    plt.rcParams.update({
-        "figure.facecolor":"#111827","axes.facecolor":"#1a2235",
-        "axes.edgecolor":"#2d3a52",  "axes.labelcolor":"#94a3b8",
-        "xtick.color":"#64748b",     "ytick.color":"#64748b",
-        "text.color":"#e2e8f0",      "grid.color":"#1e293b",
-        "legend.facecolor":"#111827","legend.edgecolor":"#2d3a52",
-        "font.family":"DejaVu Sans", "figure.dpi":110,
-    })
-
-
 @st.cache_data
 def load_data():
     for p in ["data_clean.csv","data/data_clean.csv","../data/data_clean.csv",
-              "../data_clean.csv","/mnt/user-data/uploads/data_clean__2_.csv"]:
+              "../data_clean.csv","/mnt/user-data/uploads/data_clean__1_.csv"]:
         try: return pd.read_csv(p)
         except: pass
     st.error("❌ data_clean.csv introuvable."); st.stop()
@@ -604,6 +579,7 @@ def load_data():
 
 @st.cache_data
 def decode_df(raw: pd.DataFrame) -> pd.DataFrame:
+    """Traduit les colonnes encodées en libellés lisibles — affichage uniquement."""
     d = raw.copy()
     d["Gender"]  = d["Gender"].map({0:"Féminin",1:"Masculin"})
     d["family_history_with_overweight"] = d["family_history_with_overweight"].map({0:"Non",1:"Oui"})
@@ -621,47 +597,36 @@ def decode_df(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_resource
+@st.cache_resource
 def train_model(algo=BEST_ALGO):
     df   = load_data()
-    X    = df.drop("NObeyesdad", axis=1)
+    X    = df.drop("NObeyesdad",axis=1)
     y    = df["NObeyesdad"]
-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=.2, random_state=42, stratify=y)
+    Xtr,Xte,ytr,yte = train_test_split(X,y,test_size=.2,random_state=42,stratify=y)
     sc   = StandardScaler()
     Xtrs = sc.fit_transform(Xtr)
     Xtes = sc.transform(Xte)
     clfs = {
-        "LightGBM Classifier":      LGBMClassifier(n_estimators=300, learning_rate=.05, num_leaves=63, random_state=42, verbose=-1),
-        "Random Forest Classifier": RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1),
-        "XGBoost Classifier":       XGBClassifier(n_estimators=200, learning_rate=.05, max_depth=6, random_state=42, eval_metric="mlogloss", verbosity=0),
+        "LightGBM Classifier":      LGBMClassifier(n_estimators=300,learning_rate=.05,num_leaves=63,random_state=42,verbose=-1),
+        "Random Forest Classifier": RandomForestClassifier(n_estimators=200,random_state=42,n_jobs=-1),
+        "XGBoost Classifier":       XGBClassifier(n_estimators=200,learning_rate=.05,max_depth=6,random_state=42,eval_metric="mlogloss",verbosity=0),
     }
     clf  = clfs[algo]
-    clf.fit(Xtrs, ytr)
+    clf.fit(Xtrs,ytr)
     yp   = clf.predict(Xtes)
-
-    # Explainer SHAP — TreeExplainer pour modèles d'arbres
-    explainer = shap.TreeExplainer(clf)
-
-    # Échantillon test pour les visualisations globales (max 200 pour la perf)
-    shap_sample_size = min(200, len(Xtes))
-    Xtes_sample = Xtes[:shap_sample_size]
-
-    # Calcul des valeurs SHAP sur l'échantillon (liste de tableaux, un par classe)
-    shap_values = explainer.shap_values(Xtes_sample)
-
-    # Feature names depuis les colonnes originales
-    feature_names = X.columns.tolist()
-
-    return (
-        clf, sc, feature_names,
-        accuracy_score(yte, yp),
-        f1_score(yte, yp, average="weighted"),
-        precision_score(yte, yp, average="weighted"),
-        recall_score(yte, yp, average="weighted"),
-        confusion_matrix(yte, yp),
-        classification_report(yte, yp, output_dict=True),
-        Xtes, yte, yp,
-        explainer, shap_values, Xtes_sample,
-    )
+    
+    # Ajouter SHAP
+    explainer = None
+    try:
+        explainer = shap.TreeExplainer(clf)
+    except:
+        pass
+        
+    return (clf,sc,X.columns.tolist(),
+            accuracy_score(yte,yp),f1_score(yte,yp,average="weighted"),
+            precision_score(yte,yp,average="weighted"),recall_score(yte,yp,average="weighted"),
+            confusion_matrix(yte,yp),classification_report(yte,yp,output_dict=True),
+            Xtes,yte,yp,explainer)  # 12 valeurs maintenant
 
 
 @st.cache_data
@@ -675,20 +640,29 @@ def compare_models():
 
 
 def render_cmp_table(sc_df):
+    """Render comparison table with explicit dark-mode colors — no pandas Styler."""
     metrics = ["Accuracy","F1-Score","Précision","Rappel"]
     best_vals  = {m: sc_df[m].max() for m in metrics}
     worst_vals = {m: sc_df[m].min() for m in metrics}
+
     rows_html = ""
     for algo in ALGO_LIST:
-        icon = ALGO_ICONS[algo]; color = ALGO_COLORS[algo]
+        icon = ALGO_ICONS[algo]
+        color = ALGO_COLORS[algo]
         cells = f"<td style='color:{color};font-weight:700;font-size:.87rem'>{icon} {algo}</td>"
         for m in metrics:
             v = sc_df.loc[algo, m]
-            cls = "cmp-best" if v==best_vals[m] else ("cmp-worst" if v==worst_vals[m] else "")
+            if v == best_vals[m]:
+                cls = "cmp-best"
+            elif v == worst_vals[m]:
+                cls = "cmp-worst"
+            else:
+                cls = ""
             cells += f"<td class='{cls}'>{v:.2f}%</td>"
         rows_html += f"<tr>{cells}</tr>"
+
     header = "".join([f"<th>{h}</th>" for h in ["Algorithme"]+metrics])
-    st.markdown(f"""
+    table  = f"""
     <div style='background:#111827;border:1px solid rgba(255,255,255,.08);
                 border-radius:12px;overflow:hidden;margin-top:.5rem'>
         <table class='cmp-table'>
@@ -700,242 +674,8 @@ def render_cmp_table(sc_df):
             <span style='color:#00d4b4;font-weight:700'>■</span> Meilleur &nbsp;
             <span style='color:#ef4444;font-weight:700'>■</span> Moins bon
         </div>
-    </div>""", unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════
-#  SHAP UTILITIES
-# ═══════════════════════════════════════════════════════════
-
-def get_shap_for_class(shap_values, class_idx):
-    """
-    Extrait les valeurs SHAP pour une classe donnée.
-    shap_values peut être :
-      - une liste de tableaux (shape: [n_classes][n_samples, n_features]) → TreeExplainer standard
-      - un tableau 3D (shape: [n_samples, n_features, n_classes])         → certaines versions
-    """
-    if isinstance(shap_values, list):
-        return shap_values[class_idx]          # shape (n_samples, n_features)
-    elif shap_values.ndim == 3:
-        return shap_values[:, :, class_idx]    # shape (n_samples, n_features)
-    else:
-        return shap_values                     # binaire ou déjà mono-classe
-
-
-def get_expected_value(explainer, class_idx):
-    """Extrait la valeur de base (expected_value) pour la classe donnée."""
-    ev = explainer.expected_value
-    if hasattr(ev, '__len__'):
-        return float(ev[class_idx])
-    return float(ev)
-
-
-def compute_global_shap_importance(shap_values, n_classes):
-    """
-    Calcule l'importance globale des features = moyenne des |SHAP| sur toutes les classes.
-    Retourne un tableau de shape (n_features,).
-    """
-    importances = []
-    for c in range(n_classes):
-        sv_c = get_shap_for_class(shap_values, c)
-        importances.append(np.abs(sv_c).mean(axis=0))
-    return np.mean(importances, axis=0)
-
-
-def plot_shap_waterfall_patient(explainer, patient_shap_values, pred_class,
-                                 patient_data, feature_names, class_name, class_color):
-    """
-    Waterfall SHAP individuel pour le patient → classe prédite.
-    Retourne la figure matplotlib.
-    """
-    set_dark_matplotlib()
-
-    sv_patient = get_shap_for_class(patient_shap_values, pred_class)[0]
-    base_val   = get_expected_value(explainer, pred_class)
-
-    # Trier par |SHAP| décroissant
-    n_display  = 10
-    order      = np.argsort(np.abs(sv_patient))[::-1][:n_display]
-
-    sv_top    = sv_patient[order]
-    feat_top  = [FEATURE_LABELS.get(feature_names[i], feature_names[i]) for i in order]
-    data_top  = patient_data[order]
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    colors = [class_color if v > 0 else "#3b82f6" for v in sv_top]
-    bars   = ax.barh(range(n_display), sv_top[::-1],
-                     color=colors[::-1], edgecolor="none", height=0.62)
-
-    labels_disp = [f"{feat_top[::-1][i]}  = {data_top[::-1][i]:.2f}" for i in range(n_display)]
-    ax.set_yticks(range(n_display))
-    ax.set_yticklabels(labels_disp, fontsize=8.5, color="#e2e8f0")
-    ax.axvline(0, color="#475569", lw=1.2, linestyle="--")
-    ax.set_xlabel("Contribution SHAP (impact sur la prédiction)", fontsize=9, color="#94a3b8")
-    ax.set_title(f"Explication individuelle — {class_name}",
-                 fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.18, linestyle="--")
-
-    # Annotations valeurs
-    for bar, v in zip(bars[::-1], sv_top[::-1]):
-        if abs(v) > 0.005:
-            ax.text(v + (0.003 if v >= 0 else -0.003),
-                    bar.get_y() + bar.get_height()/2,
-                    f"{v:+.3f}", va="center",
-                    ha="left" if v >= 0 else "right",
-                    fontsize=7.5, color="#e2e8f0", fontweight="700")
-
-    plt.tight_layout()
-    return fig
-
-
-def plot_shap_global_importance(shap_values, feature_names, n_classes, class_color):
-    """
-    Graphique d'importance globale SHAP (mean |SHAP| toutes classes).
-    """
-    set_dark_matplotlib()
-
-    importance = compute_global_shap_importance(shap_values, n_classes)
-    sorted_idx = np.argsort(importance)
-    labels     = [FEATURE_LABELS.get(feature_names[i], feature_names[i]) for i in sorted_idx]
-
-    fig, ax = plt.subplots(figsize=(7, 5))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    bar_colors = [class_color if i == sorted_idx[-1] else
-                  ("#a78bfa" if i == sorted_idx[-2] else "#00d4b4")
-                  for i in sorted_idx]
-
-    ax.barh(range(len(sorted_idx)), importance[sorted_idx],
-            color=bar_colors, edgecolor="none", height=0.62)
-    ax.set_yticks(range(len(sorted_idx)))
-    ax.set_yticklabels(labels, fontsize=8.5, color="#e2e8f0")
-    ax.set_xlabel("Importance SHAP moyenne |SHAP|", fontsize=9, color="#94a3b8")
-    ax.set_title("Importance Globale des Variables", fontsize=11,
-                 color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.18, linestyle="--")
-
-    for i, v in enumerate(importance[sorted_idx]):
-        ax.text(v + importance.max() * 0.01, i, f"{v:.4f}",
-                va="center", fontsize=7.5, color="#64748b", fontweight="600")
-
-    plt.tight_layout()
-    return fig
-
-
-def plot_shap_beeswarm(shap_values, Xtes_sample, feature_names, n_classes):
-    """
-    SHAP Summary Beeswarm plot (toutes classes, style médical sombre).
-    """
-    set_dark_matplotlib()
-
-    # Agréger les valeurs SHAP : moyenne absolue sur les classes pour le beeswarm
-    # On utilise la classe la plus fréquente prédite (ou on empile)
-    importance = compute_global_shap_importance(shap_values, n_classes)
-    order      = np.argsort(importance)[::-1][:12]  # top 12 features
-
-    # Construire un tableau (n_samples, n_features) = moyenne toutes classes
-    sv_mean = np.mean([get_shap_for_class(shap_values, c)
-                       for c in range(n_classes)], axis=0)
-
-    n_feats = len(order)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    fig.patch.set_facecolor("#111827")
-    ax.set_facecolor("#1a2235")
-
-    for rank, feat_idx in enumerate(order[::-1]):
-        sv_f  = sv_mean[:, feat_idx]
-        raw_f = Xtes_sample[:, feat_idx]
-
-        # Normaliser les valeurs brutes → couleur (bleu=bas, rouge=haut)
-        vmin, vmax = raw_f.min(), raw_f.max()
-        if vmax > vmin:
-            norm = (raw_f - vmin) / (vmax - vmin)
-        else:
-            norm = np.zeros_like(raw_f)
-
-        colors = plt.cm.RdBu_r(norm)
-
-        # Jitter vertical pour lisibilité
-        jitter = np.random.normal(0, 0.08, size=len(sv_f))
-        ax.scatter(sv_f, rank + jitter, c=colors, s=14,
-                   alpha=0.65, linewidths=0, zorder=2)
-
-    feat_labels = [FEATURE_LABELS.get(feature_names[i], feature_names[i])
-                   for i in order[::-1]]
-    ax.set_yticks(range(n_feats))
-    ax.set_yticklabels(feat_labels, fontsize=9, color="#e2e8f0")
-    ax.axvline(0, color="#475569", lw=1.2, linestyle="--")
-    ax.set_xlabel("Valeur SHAP (impact moyen sur la prédiction)", fontsize=9, color="#94a3b8")
-    ax.set_title("Distribution SHAP — Impact de chaque variable sur les patients",
-                 fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False)
-    ax.grid(axis="x", alpha=0.15, linestyle="--")
-
-    # Légende couleur (valeur haute/basse)
-    from matplotlib.cm import ScalarMappable
-    from matplotlib.colors import Normalize
-    sm = ScalarMappable(cmap="RdBu_r", norm=Normalize(0, 1))
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical",
-                        fraction=0.015, pad=0.01)
-    cbar.set_label("Valeur de la variable\n(bleu=bas  rouge=haut)", fontsize=7.5,
-                   color="#64748b")
-    cbar.ax.yaxis.set_tick_params(color="#64748b", labelsize=7)
-    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#64748b")
-    cbar.outline.set_edgecolor("#2d3a52")
-
-    plt.tight_layout()
-    return fig
-
-
-def generate_shap_insights(sv_patient, feature_names, pred_class, class_name):
-    """
-    Génère des insights médicaux automatiques basés sur les valeurs SHAP individuelles.
-    Retourne une liste de tuples (icon, title, text).
-    """
-    insights = []
-    order = np.argsort(np.abs(sv_patient))[::-1]
-
-    top3_idx  = order[:3]
-    top3_feat = [feature_names[i] for i in top3_idx]
-    top3_sv   = [sv_patient[i]    for i in top3_idx]
-
-    FEAT_CLINICAL = {
-        "Weight":                         ("⚖️", "Le poids est le facteur n°{rank} dans ce diagnostic."),
-        "Height":                         ("📏", "La taille est le facteur n°{rank} (influence via l'IMC)."),
-        "Age":                            ("🎂", "L'âge joue un rôle n°{rank} dans cette prédiction."),
-        "Gender":                         ("👤", "Le genre est le {rank}e facteur le plus influent."),
-        "FAF":                            ("🏃", "L'activité physique est le facteur n°{rank} (±{val:+.3f})."),
-        "CH2O":                           ("💧", "L'hydratation est le facteur n°{rank} dans ce diagnostic."),
-        "FCVC":                           ("🥦", "La consommation de légumes influence la prédiction (rang {rank})."),
-        "family_history_with_overweight": ("🧬", "Les antécédents familiaux constituent le facteur n°{rank}."),
-        "FAVC":                           ("🍔", "La consommation d'aliments caloriques impacte le diagnostic (rang {rank})."),
-        "CAEC":                           ("🍪", "Le grignotage est le facteur n°{rank} (impact {val:+.3f})."),
-        "SMOKE":                          ("🚬", "Le tabagisme est le {rank}e facteur le plus influent."),
-        "MTRANS":                         ("🚗", "Le mode de transport impacte le diagnostic (rang {rank})."),
-    }
-
-    for rank, (feat, sv) in enumerate(zip(top3_feat, top3_sv), 1):
-        direction = "augmente" if sv > 0 else "réduit"
-        label     = FEATURE_LABELS.get(feat, feat)
-        if feat in FEAT_CLINICAL:
-            icon, tpl = FEAT_CLINICAL[feat]
-            title = tpl.format(rank=rank, val=sv)
-        else:
-            icon  = "📌"
-            title = f"{label} est le facteur n°{rank} (impact {sv:+.3f})"
-        text = (f"Cette variable {direction} la probabilité de '{class_name}' "
-                f"de {abs(sv):.3f} point SHAP. "
-                f"{'Valeur haute → risque accru.' if sv > 0 else 'Valeur basse → effet protecteur.'}")
-        insights.append((icon, title, text))
-
-    return insights
+    </div>"""
+    st.markdown(table, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -999,7 +739,7 @@ df = load_data()
 
 
 # ╔═══════════════════════════════════════════════════════════╗
-#  NURSE — Page 1 : Dossier Patient
+#  ██  NURSE — Page 1 : Dossier Patient  ██
 # ╚═══════════════════════════════════════════════════════════╝
 if is_nurse and page == NURSE_PAGES[0]:
     st.markdown("""
@@ -1059,7 +799,8 @@ if is_nurse and page == NURSE_PAGES[0]:
         st.markdown("<div class='form-section'><div class='form-title ft-nurse'>🍽️ Habitudes Alimentaires</div>",
                     unsafe_allow_html=True)
         favc = st.selectbox("Aliments très caloriques (FAVC)", ["Non","Oui"], key="n_favc")
-        fcvc = st.slider("Fréquence légumes (FCVC)", 1.0, 3.0, 2.0, 0.1, key="n_fcvc")
+        fcvc = st.slider("Fréquence légumes (FCVC)", 1.0, 3.0, 2.0, 0.1, key="n_fcvc",
+                         help="1=Jamais · 2=Parfois · 3=Toujours")
         ncp  = st.slider("Repas principaux / jour (NCP)", 1.0, 4.0, 3.0, 0.5, key="n_ncp")
         caec = st.selectbox("Alimentation entre les repas (CAEC)",
                             ["Jamais","Parfois","Fréquemment","Toujours"], key="n_caec")
@@ -1086,7 +827,10 @@ if is_nurse and page == NURSE_PAGES[0]:
     st.markdown("""
     <div class='panel p-green' style='margin-top:1rem'>
         <div class='panel-title'>✅ Dossier prêt pour le médecin</div>
-        <div class='panel-body'>Données collectées. Passez au <strong>Questionnaire Clinique</strong> pour compléter, puis transmettez au médecin.</div>
+        <div class='panel-body'>
+            Données collectées. Passez au <strong>Questionnaire Clinique</strong> pour compléter,
+            puis transmettez au médecin.
+        </div>
     </div>""", unsafe_allow_html=True)
 
     st.session_state["patient"] = {
@@ -1165,69 +909,116 @@ elif is_nurse and page == NURSE_PAGES[1]:
         st.markdown("""
         <div class='panel p-nurse' style='margin-top:1.5rem'>
             <div class='panel-title'>📨 Transmission au médecin</div>
-            <div class='panel-body'>Dossier complet. Le médecin peut accéder au module <strong>Diagnostic IA</strong> pour la prédiction et les recommandations personnalisées.</div>
+            <div class='panel-body'>
+                Dossier complet. Le médecin peut accéder au module <strong>Diagnostic IA</strong>
+                pour la prédiction et les recommandations personnalisées.
+            </div>
         </div>""", unsafe_allow_html=True)
 
 
-# ── NURSE Page 3 : Tableau de Bord ──────────────────────────
-elif is_nurse and page == NURSE_PAGES[2]:
-    st.markdown("""
-    <div class='page-banner banner-nurse'>
-        <div class='banner-eyebrow ey-nurse'>👩‍⚕️ Interface Infirmière</div>
-        <div class='banner-h1'>Tableau de Bord - Compteur Patients</div>
-        <div class='banner-sub'>Gestion simple du flux de patients dans la clinique</div>
-        <span class='banner-tag'>compteur</span><span class='banner-tag'>flux-patients</span>
+# ╔═══════════════════════════════════════════════════════════╗
+#  ██  DOCTOR — Page 1 : Tableau de Bord  ██
+# ╚═══════════════════════════════════════════════════════════╝
+elif is_doctor and page == DOC_PAGES[0]:
+    st.markdown(f"""
+    <div class='page-banner banner-doctor'>
+        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-h1'>Tableau de Bord Clinique</div>
+        <div class='banner-sub'>Vue d'ensemble — cohorte de {len(df):,} patients · 7 niveaux d'obésité · 3 algorithmes</div>
+        <span class='banner-tag'>population-study</span>
+        <span class='banner-tag'>ML-classification</span>
+        <span class='banner-tag'>groupe-7</span>
     </div>""", unsafe_allow_html=True)
 
-    if 'patient_counter' not in st.session_state:
-        st.session_state.patient_counter = 0
+    imc_vals = df["Weight"]/(df["Height"]**2)
+    obese    = df[df["NObeyesdad"].isin([2,3,4])].shape[0]
+    st.markdown(f"""
+    <div class='kpi-grid'>
+        <div class='kpi-card'><div class='kpi-num'>{len(df):,}</div><div class='kpi-lbl'>👤 Patients</div></div>
+        <div class='kpi-card c-blue'><div class='kpi-num'>{df.shape[1]-1}</div><div class='kpi-lbl'>🔬 Variables</div></div>
+        <div class='kpi-card c-violet'><div class='kpi-num'>{df["NObeyesdad"].nunique()}</div><div class='kpi-lbl'>📊 Classes IMC</div></div>
+        <div class='kpi-card c-red'><div class='kpi-num'>{obese:,}</div><div class='kpi-lbl'>⚠️ Cas Obésité</div></div>
+        <div class='kpi-card c-amber'><div class='kpi-num'>{round(imc_vals.mean(),1)}</div><div class='kpi-lbl'>📏 IMC Moyen</div></div>
+        <div class='kpi-card c-green'><div class='kpi-num'>{round(df["Age"].mean(),1)}</div><div class='kpi-lbl'>🗓️ Âge Moyen</div></div>
+    </div>""", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1,col2 = st.columns([1.6,1], gap="large")
+    with col1:
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Répartition des classes cliniques</div>",
+                    unsafe_allow_html=True)
+        counts = df["NObeyesdad"].value_counts().sort_index()
+        fig,ax = dark_fig(8,5)
+        bars   = ax.barh([CLASS_NAMES[i] for i in counts.index], counts.values,
+                         color=[CLASS_HEX[i] for i in counts.index], edgecolor="none", height=.58)
+        for bar,val in zip(bars,counts.values):
+            ax.text(val+6,bar.get_y()+bar.get_height()/2,
+                    f"{val}  ({round(val/len(df)*100,1)}%)",
+                    va="center",fontsize=8.5,color="#64748b",fontweight="600")
+        ax.set_xlabel("Nombre de patients",fontsize=9,color="#64748b")
+        ax.spines[["top","right","left"]].set_visible(False)
+        ax.grid(axis="x",alpha=.2,linestyle="--")
+        ax.set_xlim(0,counts.max()*1.32)
+        ax.tick_params(colors="#94a3b8")
+        plt.tight_layout(); st.pyplot(fig,use_container_width=True)
+
     with col2:
-        st.markdown(f"""
-        <div style='background:linear-gradient(160deg,#0d1a2e,#132237);
-                    border:2px solid #0ea5e9;border-radius:30px;
-                    padding:3rem 2rem;text-align:center;margin:1rem 0 2rem 0;
-                    box-shadow:0 20px 40px rgba(14,165,233,0.2)'>
-            <div style='font-size:.8rem;font-weight:700;letter-spacing:.15em;
-                        text-transform:uppercase;color:#4a6080;margin-bottom:1rem'>
-                Patients en consultation
-            </div>
-            <div style='font-family:"DM Serif Display",serif;font-size:7rem;
-                        font-weight:800;color:#e8f4ff;line-height:1;
-                        text-shadow:0 0 30px rgba(14,165,233,0.5)'>
-                {st.session_state.patient_counter}
-            </div>
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Genre</div>",
+                    unsafe_allow_html=True)
+        g = df["Gender"].value_counts()
+        fig2,ax2 = dark_fig(4.5,4.5)
+        wedges,texts,autos = ax2.pie(
+            g.values,
+            labels=["Homme" if i==1 else "Femme" for i in g.index],
+            autopct="%1.1f%%", colors=["#3b82f6","#8b5cf6"],
+            startangle=90, pctdistance=.76,
+            wedgeprops={"edgecolor":"#111827","linewidth":3},
+        )
+        for t in texts:  t.set_color("#94a3b8"); t.set_fontsize(11)
+        for a in autos:  a.set_color("white"); a.set_fontsize(10); a.set_fontweight("bold")
+        plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Distribution de l'IMC par classe</div>",
+                unsafe_allow_html=True)
+    fig3,ax3 = dark_fig(13,4)
+    for i in range(7):
+        vals = (df[df["NObeyesdad"]==i]["Weight"]/df[df["NObeyesdad"]==i]["Height"]**2).dropna()
+        if len(vals)>3:
+            vals.plot.kde(ax=ax3,color=CLASS_HEX[i],linewidth=2.2,label=CLASS_NAMES[i])
+            ax3.fill_between(
+                np.linspace(vals.min(),vals.max(),200),0,
+                [ax3.lines[-1].get_ydata()[j]
+                 for j in np.linspace(0,len(ax3.lines[-1].get_ydata())-1,200,dtype=int)],
+                alpha=.06,color=CLASS_HEX[i])
+    ax3.set_xlabel("IMC (kg/m²)",fontsize=9,color="#64748b")
+    ax3.set_ylabel("Densité",fontsize=9,color="#64748b")
+    ax3.spines[["top","right"]].set_visible(False)
+    ax3.grid(alpha=.18,linestyle="--")
+    ax3.legend(fontsize=7.5,ncol=4)
+    plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Algorithmes de classification</div>",
+                unsafe_allow_html=True)
+    c1,c2,c3 = st.columns(3, gap="medium")
+    for col,a in zip([c1,c2,c3],ALGO_LIST):
+        col.markdown(f"""
+        <div class='model-card {"best" if a==BEST_ALGO else ""}'>
+            <div class='model-icon'>{ALGO_ICONS[a]}</div>
+            <div class='model-name' style='color:{ALGO_COLORS[a]}'>{a}</div>
+            <div class='model-desc'>{ALGO_DESC[a]}</div>
         </div>""", unsafe_allow_html=True)
 
-    btn_c1, btn_c2, btn_c3, btn_c4 = st.columns(4, gap="medium")
-    with btn_c1:
-        if st.button("Patient arrivé (+1)", use_container_width=True, key="btn_add_nurse"):
-            st.session_state.patient_counter += 1; st.rerun()
-    with btn_c2:
-        if st.button("Patient sorti (-1)", use_container_width=True, key="btn_sub_nurse"):
-            if st.session_state.patient_counter > 0:
-                st.session_state.patient_counter -= 1
-            st.rerun()
-    with btn_c3:
-        if st.button("Remettre à zéro", use_container_width=True, key="btn_reset_nurse"):
-            st.session_state.patient_counter = 0; st.rerun()
-    with btn_c4:
-        quick_add = st.number_input("Ajouter plusieurs", min_value=1, max_value=20,
-                                     value=1, step=1, key="quick_add_nurse",
-                                     label_visibility="collapsed")
-        if st.button(f"Ajouter {quick_add}", use_container_width=True, key="btn_quick_nurse"):
-            st.session_state.patient_counter += quick_add; st.rerun()
-
-    col_s1, col_s2, col_s3 = st.columns(3)
-    col_s1.metric("Patients aujourd'hui", st.session_state.patient_counter)
-    col_s2.metric("Temps d'attente estimé", f"{st.session_state.patient_counter * 5} min")
-    capacity_pct = min(int(st.session_state.patient_counter / 20 * 100), 100)
-    col_s3.metric("Capacité utilisée", f"{capacity_pct}%")
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Aperçu du dataset</div>",
+                unsafe_allow_html=True)
+    df_disp = decode_df(df)
+    st.markdown(
+        f"<span class='chip chip-teal'>{len(df):,} patients</span>"
+        f"<span class='chip'>{df.shape[1]} colonnes</span>",
+        unsafe_allow_html=True)
+    st.dataframe(df_disp, use_container_width=True, height=340)
 
 
-# ── DOCTOR Page 1 : Exploration Clinique ────────────────────
-elif is_doctor and page == DOC_PAGES[0]:
+# ── DOCTOR Page 2 : Exploration Clinique ────────────────────
+elif is_doctor and page == DOC_PAGES[1]:
     st.markdown("""
     <div class='page-banner banner-doctor'>
         <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
@@ -1244,8 +1035,10 @@ elif is_doctor and page == DOC_PAGES[0]:
         with c1:
             fig,ax = dark_fig(6,4)
             ax.hist(df[chosen],bins=40,color="#00d4b4",edgecolor="none",alpha=.8)
-            ax.axvline(df[chosen].mean(),color="#ef4444",linestyle="--",lw=1.8,label=f"Moy : {df[chosen].mean():.2f}")
-            ax.axvline(df[chosen].median(),color="#22c55e",linestyle="--",lw=1.8,label=f"Méd : {df[chosen].median():.2f}")
+            ax.axvline(df[chosen].mean(),  color="#ef4444",linestyle="--",lw=1.8,
+                       label=f"Moy : {df[chosen].mean():.2f}")
+            ax.axvline(df[chosen].median(),color="#22c55e",linestyle="--",lw=1.8,
+                       label=f"Méd : {df[chosen].median():.2f}")
             ax.set_xlabel(chosen,fontsize=9)
             ax.spines[["top","right"]].set_visible(False)
             ax.grid(axis="y",alpha=.18,linestyle="--")
@@ -1262,12 +1055,13 @@ elif is_doctor and page == DOC_PAGES[0]:
             ax.legend(fontsize=7,ncol=2)
             plt.tight_layout(); st.pyplot(fig,use_container_width=True)
 
-        s = df[chosen]; cc = st.columns(5)
+        s  = df[chosen]
+        cc = st.columns(5)
         for met,val in zip(["Moyenne","Médiane","Écart-type","Min","Max"],
                             [s.mean(),s.median(),s.std(),s.min(),s.max()]):
             cc[["Moyenne","Médiane","Écart-type","Min","Max"].index(met)].metric(met,f"{val:.3f}")
 
-        nr = int(np.ceil(len(num_cols)/4))
+        nr  = int(np.ceil(len(num_cols)/4))
         fig_all,axes = dark_fig(14,nr*3,ncols=4,nrows=nr)
         axes = axes.flatten()
         for idx,cn in enumerate(num_cols):
@@ -1295,6 +1089,18 @@ elif is_doctor and page == DOC_PAGES[0]:
         ax.grid(axis="y",alpha=.18,linestyle="--")
         plt.tight_layout(); st.pyplot(fig,use_container_width=True)
 
+        fig2,ax2 = dark_fig(10,5)
+        for i in range(7):
+            sub = df[df["NObeyesdad"]==i]
+            ax2.scatter(sub["Height"],sub["Weight"],s=20,alpha=.45,
+                        color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
+        ax2.set_xlabel("Taille (m)",fontsize=9); ax2.set_ylabel("Poids (kg)",fontsize=9)
+        ax2.set_title("Cartographie Taille vs Poids",fontsize=11,pad=10,color="#e2e8f0")
+        ax2.spines[["top","right"]].set_visible(False)
+        ax2.grid(alpha=.15,linestyle="--")
+        ax2.legend(fontsize=7,ncol=2)
+        plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+
     with tab3:
         sx1,sx2 = st.columns(2)
         xv = sx1.selectbox("Axe X",num_cols,index=2)
@@ -1302,7 +1108,8 @@ elif is_doctor and page == DOC_PAGES[0]:
         fig3,ax3 = dark_fig(10,5)
         for i in range(7):
             sub = df[df["NObeyesdad"]==i]
-            ax3.scatter(sub[xv],sub[yv],s=20,alpha=.45,color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
+            ax3.scatter(sub[xv],sub[yv],s=20,alpha=.45,
+                        color=CLASS_HEX[i],label=CLASS_NAMES[i],edgecolors="none")
         ax3.set_xlabel(xv,fontsize=9); ax3.set_ylabel(yv,fontsize=9)
         ax3.set_title(f"{xv} vs {yv}",fontsize=11,pad=10,color="#e2e8f0")
         ax3.spines[["top","right"]].set_visible(False)
@@ -1319,8 +1126,8 @@ elif is_doctor and page == DOC_PAGES[0]:
                     unsafe_allow_html=True)
 
 
-# ── DOCTOR Page 2 : Analyse Statistique ─────────────────────
-elif is_doctor and page == DOC_PAGES[1]:
+# ── DOCTOR Page 3 : Analyse Statistique ─────────────────────
+elif is_doctor and page == DOC_PAGES[2]:
     st.markdown("""
     <div class='page-banner banner-doctor'>
         <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
@@ -1343,7 +1150,7 @@ elif is_doctor and page == DOC_PAGES[1]:
         plt.yticks(fontsize=7.5,color="#94a3b8")
         plt.tight_layout(); st.pyplot(fig,use_container_width=True)
 
-        tc = corr["NObeyesdad"].drop("NObeyesdad").sort_values(key=abs,ascending=False)
+        tc   = corr["NObeyesdad"].drop("NObeyesdad").sort_values(key=abs,ascending=False)
         fig2,ax2 = dark_fig(9,4.5)
         ax2.barh(tc.index,tc.values,
                  color=["#22c55e" if v>0 else "#ef4444" for v in tc.values],
@@ -1353,6 +1160,9 @@ elif is_doctor and page == DOC_PAGES[1]:
         ax2.set_title("Impact sur le diagnostic d'obésité",fontsize=11,pad=10,color="#e2e8f0")
         ax2.spines[["top","right"]].set_visible(False)
         ax2.grid(axis="x",alpha=.18,linestyle="--")
+        for i,(v,n) in enumerate(zip(tc.values,tc.index)):
+            ax2.text(v+(.004 if v>=0 else -.004),i,f"{v:.3f}",va="center",
+                     ha="left" if v>=0 else "right",fontsize=8,color="#64748b",fontweight="600")
         plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
 
     with tab2:
@@ -1375,10 +1185,124 @@ elif is_doctor and page == DOC_PAGES[1]:
         out = pd.DataFrame(rows).sort_values("Outliers",ascending=False)
         st.dataframe(out.style.background_gradient(subset=["Outliers","% Outliers"],cmap="Reds"),
                      use_container_width=True)
+        fig3,ax3 = dark_fig(9,4)
+        ax3.bar(out["Variable"],out["% Outliers"],
+                color=["#ef4444" if v>5 else "#f59e0b" if v>2 else "#22c55e" for v in out["% Outliers"]],
+                edgecolor="none",width=.6)
+        ax3.set_ylabel("% Outliers",fontsize=9)
+        ax3.set_title("Taux d'anomalies par variable",fontsize=11,pad=10,color="#e2e8f0")
+        ax3.spines[["top","right"]].set_visible(False)
+        ax3.grid(axis="y",alpha=.18,linestyle="--")
+        plt.xticks(rotation=30,ha="right",fontsize=8.5)
+        plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
 
 
-# ── DOCTOR Page 3 : Comparaison des Modèles ─────────────────
-elif is_doctor and page == DOC_PAGES[2]:
+# ── DOCTOR Page 4 : Entraînement & Évaluation ───────────────
+elif is_doctor and page == DOC_PAGES[3]:
+    st.markdown(f"""
+    <div class='page-banner banner-doctor'>
+        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-h1'>Entraînement & Évaluation</div>
+        <div class='banner-sub'>Algorithme : {ALGO_ICONS[algo]} <strong>{algo}</strong>
+            {"&ensp;· ⭐ Meilleur modèle" if algo==BEST_ALGO else ""}</div>
+        <span class='banner-tag'>{algo.lower().replace(" ","-")}</span>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class='panel p-doctor'>
+        <div class='panel-title'>{ALGO_ICONS[algo]} {algo}</div>
+        <div class='panel-body'>{ALGO_DESC[algo]} — Cliquez pour démarrer l'entraînement.</div>
+    </div>""", unsafe_allow_html=True)
+
+    if st.button(f"🚀  Entraîner — {algo}"):
+        with st.spinner("⏳ Entraînement en cours…"):
+            clf,sc_m,fc,acc,f1,prec,rec,cm,cr,Xtes,yte,yp = train_model(algo)
+
+
+
+
+
+
+
+        st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Métriques de performance</div>",
+                    unsafe_allow_html=True)
+        mc = st.columns(4)
+        mc[0].metric("✅ Accuracy",  f"{acc*100:.2f}%")
+        mc[1].metric("📊 F1-Score",  f"{f1*100:.2f}%")
+        mc[2].metric("🎯 Précision", f"{prec*100:.2f}%")
+        mc[3].metric("📡 Rappel",    f"{rec*100:.2f}%")
+
+        lbl  = [CLASS_NAMES[i].replace(" ","\n") for i in range(7)]
+        tab1,tab2,tab3,tab4 = st.tabs(["🔲 Matrice de Confusion","📋 Rapport Clinique",
+                                        "📊 Feature Importance","📉 Métriques par Classe"])
+        with tab1:
+            c1,c2 = st.columns(2)
+            with c1:
+                fig,ax = dark_fig(6,5)
+                sns.heatmap(cm,ax=ax,annot=True,fmt="d",
+                            cmap=sns.dark_palette("#00d4b4",as_cmap=True),
+                            xticklabels=lbl,yticklabels=lbl,linewidths=.3,linecolor="#0a0f1e")
+                ax.set_xlabel("Prédit",fontsize=9); ax.set_ylabel("Réel",fontsize=9)
+                ax.set_title("Matrice de confusion",fontsize=10,pad=8,color="#e2e8f0")
+                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
+                plt.tight_layout(); st.pyplot(fig,use_container_width=True)
+            with c2:
+                cm_n = cm.astype(float)/cm.sum(axis=1)[:,np.newaxis]*100
+                fig2,ax2 = dark_fig(6,5)
+                sns.heatmap(cm_n,ax=ax2,annot=True,fmt=".1f",
+                            cmap=sns.dark_palette("#8b5cf6",as_cmap=True),
+                            xticklabels=lbl,yticklabels=lbl,linewidths=.3,linecolor="#0a0f1e",
+                            cbar_kws={"label":"%"})
+                ax2.set_xlabel("Prédit",fontsize=9); ax2.set_ylabel("Réel",fontsize=9)
+                ax2.set_title("Matrice normalisée (%)",fontsize=10,pad=8,color="#e2e8f0")
+                plt.xticks(fontsize=7); plt.yticks(fontsize=7)
+                plt.tight_layout(); st.pyplot(fig2,use_container_width=True)
+
+        with tab2:
+            cr_df = pd.DataFrame(cr).T
+            st.dataframe(
+                cr_df.style
+                    .background_gradient(cmap="Blues",subset=["precision","recall","f1-score"])
+                    .format("{:.3f}",subset=["precision","recall","f1-score"])
+                    .format("{:.0f}",subset=["support"]),
+                use_container_width=True)
+
+        with tab3:
+            if hasattr(clf,"feature_importances_"):
+                fi  = pd.DataFrame({"Variable":fc,"Importance":clf.feature_importances_}).sort_values("Importance")
+                fig3,ax3 = dark_fig(9,6)
+                med = fi["Importance"].median()
+                ax3.barh(fi["Variable"],fi["Importance"],
+                         color=[ALGO_COLORS[algo] if v>med else "#2d3a52" for v in fi["Importance"]],
+                         edgecolor="none",height=.62)
+                for i,(f_,v) in enumerate(zip(fi["Variable"],fi["Importance"])):
+                    ax3.text(v+.001,i,f"{v:.4f}",va="center",fontsize=8,color="#64748b",fontweight="600")
+                ax3.spines[["top","right","left"]].set_visible(False)
+                ax3.grid(axis="x",alpha=.18,linestyle="--")
+                ax3.set_title(f"Importance des variables — {algo}",fontsize=11,pad=10,color="#e2e8f0")
+                plt.tight_layout(); st.pyplot(fig3,use_container_width=True)
+
+        with tab4:
+            f1_c   = [cr.get(str(i),{}).get("f1-score",0) for i in range(7)]
+            prec_c = [cr.get(str(i),{}).get("precision",0) for i in range(7)]
+            rec_c  = [cr.get(str(i),{}).get("recall",0) for i in range(7)]
+            fig4,ax4 = dark_fig(11,5)
+            xp = np.arange(7); w=.27
+            ax4.bar(xp-w,prec_c,w,label="Précision",color="#3b82f6",edgecolor="none",alpha=.9)
+            ax4.bar(xp,  rec_c, w,label="Rappel",   color="#00d4b4",edgecolor="none",alpha=.9)
+            ax4.bar(xp+w,f1_c,  w,label="F1-Score", color="#8b5cf6",edgecolor="none",alpha=.9)
+            ax4.set_xticks(xp)
+            ax4.set_xticklabels([CLASS_NAMES[i].replace(" ","\n") for i in range(7)],
+                                fontsize=8.5,color="#94a3b8")
+            ax4.set_ylim(0,1.12)
+            ax4.spines[["top","right"]].set_visible(False)
+            ax4.grid(axis="y",alpha=.18,linestyle="--")
+            ax4.legend(fontsize=9)
+            plt.tight_layout(); st.pyplot(fig4,use_container_width=True)
+
+
+# ── DOCTOR Page 5 : Comparaison des Modèles ─────────────────
+elif is_doctor and page == DOC_PAGES[4]:
     st.markdown("""
     <div class='page-banner banner-doctor'>
         <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
@@ -1391,17 +1315,17 @@ elif is_doctor and page == DOC_PAGES[2]:
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Tableau comparatif</div>",
                 unsafe_allow_html=True)
-    render_cmp_table(sc_df)
+    render_cmp_table(sc_df)   # ← custom dark table, pas de pandas Styler
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Comparaison visuelle</div>",
                 unsafe_allow_html=True)
     metrics_c = ["Accuracy","F1-Score","Précision","Rappel"]
     fig_c,axes_c = dark_fig(16,5,ncols=4,nrows=1)
     for idx,metric in enumerate(metrics_c):
-        vals = sc_df[metric]
-        bars = axes_c[idx].bar(range(3),vals.values,
-                               color=[ALGO_COLORS[a] for a in ALGO_LIST],
-                               edgecolor="none",width=.52)
+        vals  = sc_df[metric]
+        bars  = axes_c[idx].bar(range(3),vals.values,
+                                color=[ALGO_COLORS[a] for a in ALGO_LIST],
+                                edgecolor="none",width=.52)
         axes_c[idx].set_xticks(range(3))
         axes_c[idx].set_xticklabels(
             [a.replace(" Classifier","") for a in ALGO_LIST],
@@ -1415,6 +1339,27 @@ elif is_doctor and page == DOC_PAGES[2]:
                              f"{v:.1f}%",ha="center",va="bottom",
                              fontsize=7.5,color="#e2e8f0",fontweight="700")
     plt.tight_layout(); st.pyplot(fig_c,use_container_width=True)
+
+    st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Radar Chart</div>",
+                unsafe_allow_html=True)
+    cats   = ["Accuracy","F1-Score","Précision","Rappel"]; N=len(cats)
+    angles = [n/float(N)*2*np.pi for n in range(N)]; angles += angles[:1]
+    plt.rcParams.update({"figure.facecolor":"#111827","axes.facecolor":"#111827","text.color":"#e2e8f0"})
+    fig_r,ax_r = plt.subplots(figsize=(6.5,6.5),subplot_kw=dict(polar=True))
+    fig_r.patch.set_facecolor("#111827"); ax_r.set_facecolor("#1a2235")
+    ax_r.grid(color="#2d3a52",linestyle="--",lw=.8)
+    ax_r.spines["polar"].set_color("#2d3a52")
+    for a in ALGO_LIST:
+        vr = [sc_df.loc[a,m] for m in cats]; vr += vr[:1]
+        ax_r.plot(angles,vr,lw=2.5,color=ALGO_COLORS[a],label=a.replace(" Classifier",""))
+        ax_r.fill(angles,vr,alpha=.1,color=ALGO_COLORS[a])
+    ax_r.set_xticks(angles[:-1])
+    ax_r.set_xticklabels(cats,fontsize=10.5,color="#94a3b8",fontweight="600")
+    ax_r.set_ylim(80,100)
+    ax_r.tick_params(axis="y",colors="#475569",labelsize=7.5)
+    ax_r.legend(loc="upper right",bbox_to_anchor=(1.45,1.1),fontsize=9.5,labelcolor="#e2e8f0")
+    ax_r.set_title("Performance comparative",fontsize=11,color="#e2e8f0",pad=20)
+    plt.tight_layout(); st.pyplot(fig_r,use_container_width=True)
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>🏆 Résultats finaux</div>",
                 unsafe_allow_html=True)
@@ -1431,10 +1376,8 @@ elif is_doctor and page == DOC_PAGES[2]:
         </div>""", unsafe_allow_html=True)
 
 
-# ╔═══════════════════════════════════════════════════════════╗
-#  DOCTOR Page 4 : Diagnostic IA  ██ avec SHAP ██
-# ╚═══════════════════════════════════════════════════════════╝
-elif is_doctor and page == DOC_PAGES[3]:
+# ── DOCTOR Page 6 : Diagnostic IA ───────────────────────────
+elif is_doctor and page == DOC_PAGES[5]:
     st.markdown(f"""
     <div class='page-banner banner-doctor'>
         <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
@@ -1443,22 +1386,15 @@ elif is_doctor and page == DOC_PAGES[3]:
             {"&ensp;· ⭐ Meilleur modèle" if algo==BEST_ALGO else ""}</div>
     </div>""", unsafe_allow_html=True)
 
-    with st.spinner("Initialisation du modèle et des valeurs SHAP…"):
-        (clf, sc_m, fc,
-         acc, f1, prec, rec,
-         cm, cr,
-         Xtes, yte, yp,
-         explainer, shap_values, Xtes_sample) = train_model(algo)
-
-    n_classes = len(CLASS_NAMES)
+    with st.spinner("Initialisation du modèle…"):
+        clf,sc_m,fc,acc,f1,prec,rec,*_, Xtes, yte, yp, explainer, shap_values = train_model(algo)
 
     st.markdown(
         f"<span class='chip chip-teal'>{ALGO_ICONS[algo]} {algo}</span>"
         f"<span class='chip'>✅ Acc {acc*100:.1f}%</span>"
         f"<span class='chip'>F1 {f1*100:.1f}%</span>"
         f"<span class='chip'>Prec {prec*100:.1f}%</span>"
-        f"<span class='chip'>Rapp {rec*100:.1f}%</span>"
-        f"<span class='chip chip-violet'>🔍 SHAP activé</span>",
+        f"<span class='chip'>Rapp {rec*100:.1f}%</span>",
         unsafe_allow_html=True)
 
     pat = st.session_state.get("patient",{})
@@ -1466,7 +1402,9 @@ elif is_doctor and page == DOC_PAGES[3]:
         st.markdown("""
         <div class='panel p-nurse'>
             <div class='panel-title'>🔗 Dossier infirmière importé</div>
-            <div class='panel-body'>Données pré-chargées depuis l'interface infirmière. Ajustez si nécessaire.</div>
+            <div class='panel-body'>
+                Données pré-chargées depuis l'interface infirmière. Ajustez si nécessaire.
+            </div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Paramètres Patient</div>",
@@ -1540,9 +1478,6 @@ elif is_doctor and page == DOC_PAGES[3]:
     with bcol:
         diag_btn = st.button("🩺  Lancer le Diagnostic",use_container_width=True)
 
-    # ════════════════════════════════════════════════════════
-    #  RÉSULTAT DU DIAGNOSTIC + SHAP
-    # ════════════════════════════════════════════════════════
     if diag_btn:
         row = {
             "Gender":GENDER_MAP[gender],"Age":float(age),
@@ -1560,11 +1495,9 @@ elif is_doctor and page == DOC_PAGES[3]:
         proba = clf.predict_proba(Xns)[0] if hasattr(clf,"predict_proba") else None
         info  = CLASS_INFO[pred]
 
-        rb_class  = {"green":"rb-green","amber":"rb-amber","red":"rb-red"}[info[1]]
-        emoji     = "✅" if info[1]=="green" else "⚠️" if info[1]=="amber" else "🚨"
-        pred_color = CLASS_HEX[pred]
+        rb_class = {"green":"rb-green","amber":"rb-amber","red":"rb-red"}[info[1]]
+        emoji    = "✅" if info[1]=="green" else "⚠️" if info[1]=="amber" else "🚨"
 
-        # ── Résultat principal ──────────────────────────────
         st.markdown("---")
         st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Résultat du Diagnostic</div>",
                     unsafe_allow_html=True)
@@ -1595,28 +1528,26 @@ elif is_doctor and page == DOC_PAGES[3]:
                 </div>
             </div>""", unsafe_allow_html=True)
 
-        # ── Probabilités ────────────────────────────────────
         if proba is not None:
             st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Probabilités diagnostiques</div>",
                         unsafe_allow_html=True)
             fig_p,ax_p = dark_fig(11,4.5)
-            bars_p = ax_p.bar([CLASS_NAMES[i] for i in range(7)],proba,
-                              color=[CLASS_HEX[i] for i in range(7)],edgecolor="none",width=.58)
-            for bar,av in zip(bars_p,[1.0 if i==pred else .38 for i in range(7)]):
-                bar.set_alpha(av)
+            alpha_p = [1.0 if i==pred else .38 for i in range(7)]
+            bars_p  = ax_p.bar([CLASS_NAMES[i] for i in range(7)],proba,
+                               color=[CLASS_HEX[i] for i in range(7)],edgecolor="none",width=.58)
+            for bar,av in zip(bars_p,alpha_p): bar.set_alpha(av)
             ax_p.set_ylim(0,1.15)
             ax_p.set_ylabel("Probabilité",fontsize=9,color="#64748b")
             ax_p.spines[["top","right"]].set_visible(False)
             ax_p.grid(axis="y",alpha=.18,linestyle="--")
             plt.xticks(rotation=22,ha="right",fontsize=8.5,color="#94a3b8")
-            for bar,p_v in zip(bars_p,proba):
-                if p_v>.015:
-                    ax_p.text(bar.get_x()+bar.get_width()/2,p_v+.015,
-                              f"{p_v*100:.1f}%",ha="center",va="bottom",
+            for bar,p in zip(bars_p,proba):
+                if p>.015:
+                    ax_p.text(bar.get_x()+bar.get_width()/2,p+.015,
+                              f"{p*100:.1f}%",ha="center",va="bottom",
                               fontsize=8.5,color="#e2e8f0",fontweight="700")
             plt.tight_layout(); st.pyplot(fig_p,use_container_width=True)
 
-        # ── Recommandations ─────────────────────────────────
         st.markdown("<div class='sec-head'><div class='dot dot-doctor'></div>Recommandations Médicales Personnalisées</div>",
                     unsafe_allow_html=True)
         recs = []
@@ -1629,12 +1560,14 @@ elif is_doctor and page == DOC_PAGES[3]:
         else:
             recs.append(("amber","🏃","Activité physique à renforcer",
                          "Progresser vers 3–4 séances/semaine (recommandations OMS 2024)."))
+
         if ch2o<1.5:
             recs.append(("red","💧","Hydratation critique",
                          f"{ch2o} L/j. Objectif minimum : 2 L/j (2.5 L en période chaude)."))
         elif ch2o>=2.0:
             recs.append(("green","💧","Hydratation satisfaisante",
                          f"{ch2o} L/jour — conforme aux recommandations EFSA."))
+
         if caec in ["Fréquemment","Toujours"]:
             recs.append(("red","🍪","Grignotage excessif",
                          "+20–30% d'apport calorique. Orienter vers un diététicien."))
@@ -1644,6 +1577,7 @@ elif is_doctor and page == DOC_PAGES[3]:
         if family=="Oui":
             recs.append(("amber","🧬","Prédisposition génétique",
                          "Risque ×2–3. Suivi médical annuel et bilan métabolique complet."))
+
         if imc_d>=30:
             recs.append(("red","⚕️","Consultation spécialiste urgente",
                          "Bilan lipidique, glycémie à jeun, TA. Orientation endocrinologue / nutritionniste."))
@@ -1653,6 +1587,7 @@ elif is_doctor and page == DOC_PAGES[3]:
         else:
             recs.append(("green","⚕️","Profil clinique satisfaisant",
                          "IMC OMS normal. Maintenir les habitudes. Prochain bilan dans 12 mois."))
+
         rc_map = {"green":"rc-green","amber":"rc-amber","red":"rc-red"}
         for color,icon,title,text in recs:
             st.markdown(f"""
@@ -1664,206 +1599,13 @@ elif is_doctor and page == DOC_PAGES[3]:
                 </div>
             </div>""", unsafe_allow_html=True)
 
-
-        # ════════════════════════════════════════════════════
-        #  ██  SECTION SHAP — EXPLICABILITÉ IA  ██
-        # ════════════════════════════════════════════════════
-        st.markdown("---")
         st.markdown("""
-        <div class='sec-head'>
-            <div class='dot dot-violet'></div>
-            🔍 Explicabilité SHAP — Pourquoi cette prédiction ?
+        <div style='background:#111827;border-radius:10px;padding:.85rem 1.3rem;
+                    margin-top:1.5rem;border:1px solid rgba(255,255,255,.06);
+                    font-size:.76rem;color:#334155;text-align:center;line-height:1.7'>
+            ⚠️ <strong style='color:#475569'>Avertissement légal :</strong>
+            Ce diagnostic IA est à des fins éducatives uniquement. Il ne se substitue pas à
+            l'évaluation clinique d'un professionnel de santé qualifié.
+            Toute décision thérapeutique relève de la responsabilité du médecin.
         </div>""", unsafe_allow_html=True)
-
-        # Panel de présentation SHAP
-        st.markdown(f"""
-        <div style='background:linear-gradient(135deg,rgba(139,92,246,.07),rgba(0,0,0,0));
-                    border:1px solid rgba(139,92,246,.25);border-radius:14px;
-                    padding:1.4rem 1.8rem;margin-bottom:1.5rem'>
-            <div style='font-size:.67rem;font-weight:700;letter-spacing:.12em;
-                        text-transform:uppercase;color:#7c3aed;margin-bottom:.5rem'>
-                SHAP · SHapley Additive exPlanations
-            </div>
-            <div style='font-size:.92rem;color:#e2e8f0;font-weight:600;margin-bottom:.4rem'>
-                L'IA explique son raisonnement pour ce patient
-            </div>
-            <div style='font-size:.83rem;color:#64748b;line-height:1.7'>
-                SHAP décompose la prédiction <strong style='color:{pred_color}'>{info[0]}</strong>
-                variable par variable. Chaque barre indique <em>dans quelle mesure</em> et
-                <em>dans quel sens</em> cette variable a influencé le diagnostic —
-                rendant l'IA <strong style='color:#a78bfa'>totalement transparente</strong>
-                et auditée cliniquement.
-            </div>
-            <div style='margin-top:.9rem;display:flex;gap:1.5rem;flex-wrap:wrap'>
-                <span><span style='display:inline-block;width:14px;height:14px;
-                    background:{pred_color};border-radius:3px;vertical-align:middle;
-                    margin-right:.4rem'></span>
-                    <span style='font-size:.78rem;color:#94a3b8'>Augmente le risque</span></span>
-                <span><span style='display:inline-block;width:14px;height:14px;
-                    background:#3b82f6;border-radius:3px;vertical-align:middle;
-                    margin-right:.4rem'></span>
-                    <span style='font-size:.78rem;color:#94a3b8'>Diminue le risque</span></span>
-                <span><span style='font-size:.78rem;color:#64748b'>
-                    Valeur de base : E[f(X)] =
-                    {get_expected_value(explainer, pred):.3f}</span></span>
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-        # ── Calcul SHAP pour ce patient spécifique ──────────
-        with st.spinner("🔬 Calcul des valeurs SHAP individuelles…"):
-            patient_shap = explainer.shap_values(Xns)
-
-        sv_patient_pred = get_shap_for_class(patient_shap, pred)[0]
-        patient_data_arr = Xn.values[0]
-
-        # ── Ligne 1 : Waterfall + Importance globale ────────
-        shap_col1, shap_col2 = st.columns([1.35, 1], gap="large")
-
-        with shap_col1:
-            st.markdown(f"""
-            <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                        text-transform:uppercase;color:#8b5cf6;margin-bottom:.6rem'>
-                📊 Explication individuelle — Classe prédite : {info[0]}
-            </div>""", unsafe_allow_html=True)
-
-            fig_wf = plot_shap_waterfall_patient(
-                explainer, patient_shap, pred,
-                patient_data_arr, fc, info[0], pred_color
-            )
-            st.pyplot(fig_wf, use_container_width=True)
-            plt.close(fig_wf)
-
-            st.markdown("""
-            <div style='font-size:.75rem;color:#475569;margin-top:.3rem;line-height:1.6;
-                        padding:.6rem .9rem;background:#0d1523;border-radius:8px'>
-                <strong style='color:#64748b'>Comment lire :</strong>
-                Chaque barre = contribution d'une variable à la prédiction finale.
-                La valeur entre parenthèses est la valeur réelle du patient pour cette variable.
-                Le total des barres s'accumule de la valeur de base vers la prédiction finale.
-            </div>""", unsafe_allow_html=True)
-
-        with shap_col2:
-            st.markdown(f"""
-            <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                        text-transform:uppercase;color:#8b5cf6;margin-bottom:.6rem'>
-                🏆 Importance Globale des Variables (SHAP)
-            </div>""", unsafe_allow_html=True)
-
-            fig_imp = plot_shap_global_importance(shap_values, fc, n_classes, pred_color)
-            st.pyplot(fig_imp, use_container_width=True)
-            plt.close(fig_imp)
-
-            st.markdown("""
-            <div style='font-size:.75rem;color:#475569;margin-top:.3rem;line-height:1.6;
-                        padding:.6rem .9rem;background:#0d1523;border-radius:8px'>
-                <strong style='color:#64748b'>Comment lire :</strong>
-                Importance moyenne sur l'ensemble du jeu de test (200 patients).
-                Variables surlignées = les plus déterminantes pour tous les diagnostics.
-            </div>""", unsafe_allow_html=True)
-
-        # ── Insights médicaux automatiques ──────────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:.8rem 0 .6rem'>
-            🧠 Insights Médicaux Générés par SHAP
-        </div>""", unsafe_allow_html=True)
-
-        insights = generate_shap_insights(sv_patient_pred, fc, pred, info[0])
-        insight_cols = st.columns(len(insights), gap="medium")
-        for col_i, (icon, title, text) in zip(insight_cols, insights):
-            with col_i:
-                st.markdown(f"""
-                <div class='shap-insight-card'>
-                    <div class='shap-insight-icon'>{icon}</div>
-                    <div>
-                        <div class='shap-insight-title'>{title}</div>
-                        <div class='shap-insight-text'>{text}</div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
-
-        # ── SHAP Summary Beeswarm (population) ─────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:1.5rem 0 .6rem'>
-            🌡️ Distribution SHAP — Vue Population (jeu de test)
-        </div>""", unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class='panel p-violet' style='margin-bottom:1rem'>
-            <div class='panel-title'>📖 Interprétation du graphique population</div>
-            <div class='panel-body'>
-                Chaque point représente <strong>un patient du jeu de test</strong>.
-                La couleur indique la valeur de la variable pour ce patient
-                (<span style='color:#ef4444;font-weight:700'>rouge = élevée</span>,
-                <span style='color:#3b82f6;font-weight:700'>bleu = faible</span>).
-                La position horizontale montre si la variable pousse la prédiction vers
-                une classe supérieure (droite) ou inférieure (gauche).
-                Un nuage rouge à droite signifie que les valeurs hautes de cette variable
-                augmentent fortement le risque d'obésité.
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-        with st.spinner("📡 Génération du SHAP Summary Plot…"):
-            fig_bee = plot_shap_beeswarm(shap_values, Xtes_sample, fc, n_classes)
-        st.pyplot(fig_bee, use_container_width=True)
-        plt.close(fig_bee)
-
-        # ── Tableau SHAP du patient ─────────────────────────
-        st.markdown("""
-        <div style='font-size:.72rem;font-weight:700;letter-spacing:.09em;
-                    text-transform:uppercase;color:#8b5cf6;margin:1.5rem 0 .6rem'>
-            📋 Tableau Détaillé des Valeurs SHAP — Ce Patient
-        </div>""", unsafe_allow_html=True)
-
-        shap_df = pd.DataFrame({
-            "Variable":       [FEATURE_LABELS.get(f, f) for f in fc],
-            "Valeur Patient": [f"{v:.3f}" for v in patient_data_arr],
-            "SHAP":           sv_patient_pred,
-            "|SHAP|":         np.abs(sv_patient_pred),
-            "Sens":           ["↑ Augmente" if v > 0 else "↓ Diminue" for v in sv_patient_pred],
-        }).sort_values("|SHAP|", ascending=False).reset_index(drop=True)
-        shap_df["SHAP"]  = shap_df["SHAP"].round(4)
-        shap_df["|SHAP|"] = shap_df["|SHAP|"].round(4)
-
-        # Colorier la colonne Sens
-        def color_sens(val):
-            if "↑" in str(val): return "color: #ef4444; font-weight: 700"
-            if "↓" in str(val): return "color: #3b82f6; font-weight: 700"
-            return ""
-        def color_shap(val):
-            try:
-                v = float(val)
-                if v > 0.01:  return "color: #fca5a5; font-weight: 700"
-                if v < -0.01: return "color: #93c5fd; font-weight: 700"
-            except: pass
-            return "color: #64748b"
-
-        styled = (shap_df.style
-                  .applymap(color_sens, subset=["Sens"])
-                  .applymap(color_shap, subset=["SHAP"])
-                  .background_gradient(subset=["|SHAP|"], cmap="Purples"))
-        st.dataframe(styled, use_container_width=True, height=420)
-
-        # ── Note de clôture SHAP ────────────────────────────
-        st.markdown(f"""
-        <div style='background:#0d1523;border:1px solid rgba(139,92,246,.18);
-                    border-radius:12px;padding:1.2rem 1.6rem;margin-top:1rem;
-                    display:flex;align-items:flex-start;gap:1rem'>
-            <div style='font-size:1.6rem;flex-shrink:0'>🏥</div>
-            <div>
-                <div style='font-size:.85rem;font-weight:700;color:#c4b5fd;margin-bottom:.3rem'>
-                    Interprétabilité clinique certifiée — SHAP + {algo}
-                </div>
-                <div style='font-size:.79rem;color:#475569;line-height:1.65'>
-                    Ce diagnostic s'appuie sur un modèle {ALGO_ICONS[algo]} <strong style='color:#94a3b8'>{algo}</strong>
-                    atteignant <strong style='color:#00d4b4'>{acc*100:.1f}% d'accuracy</strong> (F1 = {f1*100:.1f}%).
-                    Les valeurs SHAP garantissent la traçabilité de chaque décision —
-                    conformément aux exigences de l'IA médicale explicable (XAI).
-                    Les 3 facteurs les plus décisifs pour ce patient sont :
-                    <strong style='color:#e2e8f0'>
-                        {", ".join([FEATURE_LABELS.get(fc[i], fc[i])
-                                    for i in np.argsort(np.abs(sv_patient_pred))[::-1][:3]])}
-                    </strong>.
-                </div>
-            </div>
-        </div>""", unsafe_allow_html=True)
+   
