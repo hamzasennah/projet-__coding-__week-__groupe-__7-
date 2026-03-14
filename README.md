@@ -229,11 +229,13 @@ SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transp
 
 | Rang | Feature | Impact |
 |---|---|---|
-| 1 | Poids (Weight) | Très élevé ➕ |
-| 2 | Fréquence de consommation de légumes (FCVC) | Élevé ➖ |
-| 3 | Activité physique (FAF) | Élevé ➖ |
-| 4 | Consommation de nourriture entre les repas (CAEC) | Moyen |
-| 5 | Historique familial d'obésité (family_history) | Moyen ➕ |
+| 1 | Historique familial d'obésité (family_history_with_overweight) | Très élevé ➕ |
+| 2 | Taille (Height) | Élevé ➖ |
+| 3 | Poids (Weight) | Élevé ➖ |
+| 4 | Genre (Gender) | Moyen |
+| 5 | Âge (Age) | Moyen ➕ |
+| 6 | Fréquence de consommation de légumes (FCVC) | Moyen ➕ |
+| 7 | Consommation d’aliments hypercaloriques (FAVC) | Moyen ➕ |
 
 > ✏️ *Mettez à jour ce tableau avec vos résultats SHAP réels.*
 
