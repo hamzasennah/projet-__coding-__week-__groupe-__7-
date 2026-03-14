@@ -34,3 +34,9 @@ df[col_category] = df[col_category].astype('category')
 
 # vérifier
 df.info()
+# yes/no variables
+yes_no_cols = ['family_history_with_overweight', 'FAVC', 'SMOKE', 'SCC']
+
+for col in yes_no_cols:
+    df[col] = df[col].str.lower()
+    df[col] = df[col].map({'yes': 1, 'no': 0})
