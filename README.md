@@ -273,9 +273,9 @@ def optimize_memory(df):
 
 Les tests sont définis dans `tests/test_data_processing.py` et couvrent :
 
-- ✅ Vérification de la gestion des valeurs manquantes
-- ✅ Vérification de la fonction `optimize_memory(df)`
-- ✅ Vérification du chargement du modèle et de la génération de prédictions
+-  Vérification de la gestion des valeurs manquantes
+-  Vérification de la fonction `optimize_memory(df)`
+-  Vérification du chargement du modèle et de la génération de prédictions
 
 ```bash
 # Lancer les tests manuellement
@@ -311,7 +311,7 @@ DataFrame and print the memory usage before and after."
 
 | Critère | Évaluation |
 |---|---|
-| Précision du code généré | ✅ Très bonne |
+| Précision du code généré | Très bonne |
 | Nécessité d'ajustements | Mineure (ajout gestion colonnes catégorielles) |
 | Gain de temps estimé | ~70% |
 
