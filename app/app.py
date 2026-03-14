@@ -1425,9 +1425,6 @@ elif is_nurse and page == NURSE_PAGES[2]:
     if 'patient_log' not in st.session_state:
         st.session_state.patient_log = []
 
-    # On gère le log au moment des boutons déjà définis plus haut
-    # donc on réinjecte les callbacks via un deuxième bloc de log
-    # Ajout dans le log si le compteur vient de changer
     if 'last_counter' not in st.session_state:
         st.session_state.last_counter = nb_patients
 
@@ -1437,33 +1434,58 @@ elif is_nurse and page == NURSE_PAGES[2]:
     if not st.session_state.patient_log:
         st.markdown("""
         <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;
-                    padding:1.4rem;text-align:center;color:#334155;font-size:.83rem'>
-            Aucun mouvement enregistré pour le moment.
+                    padding:1.8rem;text-align:center;color:#334155;font-size:.83rem;
+                    letter-spacing:.04em'>
+            📋 &nbsp; Aucun mouvement enregistré pour le moment.
         </div>""", unsafe_allow_html=True)
     else:
-        log_html = ""
-        for entry in reversed(st.session_state.patient_log[-10:]):
-            e_color = "#34d399" if entry["type"] == "arrivée" else "#f43f5e" if entry["type"] == "sortie" else "#64748b"
-            e_icon  = "➕" if entry["type"] == "arrivée" else "➖" if entry["type"] == "sortie" else "🔄"
-            log_html += f"""
-            <div style='display:flex;align-items:center;gap:1rem;padding:.55rem .8rem;
-                        border-bottom:1px solid rgba(255,255,255,.04);font-size:.81rem'>
-                <span style='color:{e_color};font-size:1rem;width:20px;text-align:center'>{e_icon}</span>
-                <span style='color:#64748b;font-family:"JetBrains Mono",monospace;font-size:.72rem;
-                             flex-shrink:0'>{entry["heure"]}</span>
-                <span style='color:#e2e8f0;flex:1'>{entry["message"]}</span>
-                <span style='background:{e_color}22;color:{e_color};border-radius:20px;
-                             padding:.1rem .6rem;font-size:.68rem;font-weight:700'>
-                    {entry["total"]} pat.
-                </span>
-            </div>"""
-        st.markdown(f"""
+        # En-tête du tableau
+        st.markdown("""
         <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;overflow:hidden'>
-            {log_html}
+            <div style='display:grid;grid-template-columns:32px 80px 1fr 80px;
+                        gap:0;padding:.5rem 1rem;
+                        background:#111827;border-bottom:1px solid #1e3456'>
+                <span style='font-size:.65rem;font-weight:700;letter-spacing:.08em;
+                             text-transform:uppercase;color:#334155'></span>
+                <span style='font-size:.65rem;font-weight:700;letter-spacing:.08em;
+                             text-transform:uppercase;color:#334155'>Heure</span>
+                <span style='font-size:.65rem;font-weight:700;letter-spacing:.08em;
+                             text-transform:uppercase;color:#334155'>Mouvement</span>
+                <span style='font-size:.65rem;font-weight:700;letter-spacing:.08em;
+                             text-transform:uppercase;color:#334155;text-align:right'>Total</span>
+            </div>
         </div>""", unsafe_allow_html=True)
+
+        entries = list(reversed(st.session_state.patient_log[-10:]))
+        for idx, entry in enumerate(entries):
+            if entry["type"] == "arrivée":
+                e_color, e_icon, e_bg = "#34d399", "➕", "rgba(52,211,153,.07)"
+            elif entry["type"] == "sortie":
+                e_color, e_icon, e_bg = "#f43f5e", "➖", "rgba(244,63,94,.07)"
+            else:
+                e_color, e_icon, e_bg = "#94a3b8", "🔄", "rgba(148,163,184,.05)"
+
+            border_bottom = "border-bottom:1px solid rgba(255,255,255,.04);" if idx < len(entries)-1 else ""
+            badge_bg = e_color + "22"
+
+            st.markdown(
+                f"<div style='background:{e_bg};{border_bottom}"
+                f"display:grid;grid-template-columns:32px 80px 1fr 80px;"
+                f"align-items:center;gap:0;padding:.6rem 1rem;margin-top:-1px'>"
+                f"<span style='color:{e_color};font-size:.95rem;text-align:center'>{e_icon}</span>"
+                f"<span style='color:#475569;font-family:\"JetBrains Mono\",monospace;"
+                f"font-size:.72rem;letter-spacing:.02em'>{entry['heure']}</span>"
+                f"<span style='color:#cbd5e1;font-size:.82rem'>{entry['message']}</span>"
+                f"<span style='background:{badge_bg};color:{e_color};"
+                f"border-radius:20px;padding:.15rem .6rem;font-size:.7rem;"
+                f"font-weight:700;text-align:center;display:block'>{entry['total']} pat.</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
     # Bouton vider le journal
     if st.session_state.patient_log:
+        st.markdown("<div style='margin-top:.8rem'></div>", unsafe_allow_html=True)
         if st.button("🗑️  Vider le journal", key="btn_clear_log"):
             st.session_state.patient_log = []
             st.rerun()
