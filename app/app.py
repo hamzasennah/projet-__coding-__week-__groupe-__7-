@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import seaborn as sns
+import datetime
 import warnings
 warnings.filterwarnings("ignore")
 from xgboost import XGBClassifier
@@ -1231,6 +1232,12 @@ elif is_nurse and page == NURSE_PAGES[2]:
         </div>""", unsafe_allow_html=True)
         if st.button("Patient arrivé (+1)", use_container_width=True, key="btn_add_nurse"):
             st.session_state.patient_counter += 1
+            st.session_state.setdefault('patient_log', []).append({
+                "heure":   datetime.datetime.now().strftime("%H:%M:%S"),
+                "type":    "arrivée",
+                "message": "1 patient admis en clinique",
+                "total":   st.session_state.patient_counter,
+            })
             st.rerun()
 
     with btn_c2:
@@ -1244,6 +1251,12 @@ elif is_nurse and page == NURSE_PAGES[2]:
         if st.button("Patient sorti (-1)", use_container_width=True, key="btn_sub_nurse"):
             if st.session_state.patient_counter > 0:
                 st.session_state.patient_counter -= 1
+                st.session_state.setdefault('patient_log', []).append({
+                    "heure":   datetime.datetime.now().strftime("%H:%M:%S"),
+                    "type":    "sortie",
+                    "message": "1 patient a quitté la clinique",
+                    "total":   st.session_state.patient_counter,
+                })
             st.rerun()
 
     with btn_c3:
@@ -1255,6 +1268,12 @@ elif is_nurse and page == NURSE_PAGES[2]:
                         letter-spacing:.06em;text-transform:uppercase'>Réinitialiser</div>
         </div>""", unsafe_allow_html=True)
         if st.button("Remettre à zéro", use_container_width=True, key="btn_reset_nurse"):
+            st.session_state.setdefault('patient_log', []).append({
+                "heure":   datetime.datetime.now().strftime("%H:%M:%S"),
+                "type":    "reset",
+                "message": f"Remise à zéro ({st.session_state.patient_counter} patients sortis)",
+                "total":   0,
+            })
             st.session_state.patient_counter = 0
             st.rerun()
 
@@ -1271,64 +1290,183 @@ elif is_nurse and page == NURSE_PAGES[2]:
                                      label_visibility="collapsed")
         if st.button(f"Ajouter {quick_add}", use_container_width=True, key="btn_quick_nurse"):
             st.session_state.patient_counter += quick_add
+            st.session_state.setdefault('patient_log', []).append({
+                "heure":   datetime.datetime.now().strftime("%H:%M:%S"),
+                "type":    "arrivée",
+                "message": f"{quick_add} patient(s) admis en groupe",
+                "total":   st.session_state.patient_counter,
+            })
             st.rerun()
 
-    # Statistiques simples
-    st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Statistiques du jour</div>",
+    # ── Calculs capacité ────────────────────────────────────
+    CAPACITE_MAX  = 20
+    nb_patients   = st.session_state.patient_counter
+    places_libres = max(0, CAPACITE_MAX - nb_patients)
+    capacity_pct  = min(int(nb_patients / CAPACITE_MAX * 100), 100)
+    progress      = min(nb_patients / CAPACITE_MAX, 1.0)
+
+    if capacity_pct == 0:
+        statut_txt, statut_color, statut_icon = "Clinique vide", "#3b82f6", "🔵"
+    elif capacity_pct < 50:
+        statut_txt, statut_color, statut_icon = "Disponible", "#22c55e", "🟢"
+    elif capacity_pct < 80:
+        statut_txt, statut_color, statut_icon = "Affluence modérée", "#f59e0b", "🟡"
+    elif capacity_pct < 100:
+        statut_txt, statut_color, statut_icon = "Quasi complet", "#f97316", "🟠"
+    else:
+        statut_txt, statut_color, statut_icon = "COMPLET", "#ef4444", "🔴"
+
+    bar_color = "#34d399" if progress < 0.3 else "#fbbf24" if progress < 0.7 else "#f43f5e"
+    kpi_cls_places = "c-green" if places_libres > 10 else "c-amber" if places_libres > 4 else "c-red"
+
+    # ── Alerte statut ────────────────────────────────────────
+    if capacity_pct >= 100:
+        st.markdown(f"""
+        <div style='background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);
+                    border-radius:12px;padding:1rem 1.4rem;margin-bottom:1rem;
+                    display:flex;align-items:center;gap:.8rem'>
+            <span style='font-size:1.4rem'>🚨</span>
+            <div>
+                <div style='font-weight:700;color:#fca5a5;font-size:.9rem'>Capacité maximale atteinte</div>
+                <div style='color:#64748b;font-size:.79rem'>Aucune nouvelle admission possible. Orientez les patients.</div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+    elif capacity_pct >= 80:
+        st.markdown(f"""
+        <div style='background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.35);
+                    border-radius:12px;padding:1rem 1.4rem;margin-bottom:1rem;
+                    display:flex;align-items:center;gap:.8rem'>
+            <span style='font-size:1.4rem'>⚠️</span>
+            <div>
+                <div style='font-weight:700;color:#fdba74;font-size:.9rem'>Capacité quasi atteinte</div>
+                <div style='color:#64748b;font-size:.79rem'>Plus que {places_libres} place(s) disponible(s). Vigilance requise.</div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── KPI row : 4 cartes ──────────────────────────────────
+    st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Tableau de capacité</div>",
                 unsafe_allow_html=True)
 
-    col_s1, col_s2, col_s3 = st.columns(3)
+    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
 
     with col_s1:
         st.markdown(f"""
         <div class='kpi-card c-blue'>
-            <div class='kpi-num'>{st.session_state.patient_counter}</div>
-            <div class='kpi-lbl'>Patients aujourd'hui</div>
-        </div>
-        """, unsafe_allow_html=True)
+            <div class='kpi-num'>{nb_patients}</div>
+            <div class='kpi-lbl'>Patients présents</div>
+        </div>""", unsafe_allow_html=True)
 
     with col_s2:
-        est_time = st.session_state.patient_counter * 5
         st.markdown(f"""
-        <div class='kpi-card c-green'>
-            <div class='kpi-num'>{est_time} min</div>
-            <div class='kpi-lbl'>Temps d'attente estimé</div>
-        </div>
-        """, unsafe_allow_html=True)
+        <div class='kpi-card {kpi_cls_places}'>
+            <div class='kpi-num'>{places_libres}</div>
+            <div class='kpi-lbl'>Places disponibles / {CAPACITE_MAX}</div>
+        </div>""", unsafe_allow_html=True)
 
     with col_s3:
-        capacity_pct = min(int(st.session_state.patient_counter / 20 * 100), 100)
-        color_cls = "c-green" if capacity_pct < 50 else "c-amber" if capacity_pct < 80 else "c-red"
-        color_hex = "#22c55e" if capacity_pct < 50 else "#f59e0b" if capacity_pct < 80 else "#ef4444"
+        kpi_cls_pct = "c-green" if capacity_pct < 50 else "c-amber" if capacity_pct < 80 else "c-red"
         st.markdown(f"""
-        <div class='kpi-card {color_cls}'>
+        <div class='kpi-card {kpi_cls_pct}'>
             <div class='kpi-num'>{capacity_pct}%</div>
-            <div class='kpi-lbl'>Capacité utilisée</div>
-        </div>
-        """, unsafe_allow_html=True)
+            <div class='kpi-lbl'>Taux d'occupation</div>
+        </div>""", unsafe_allow_html=True)
 
-    # Barre de progression
-    progress = min(st.session_state.patient_counter / 20, 1.0)
-    bar_color = "#34d399" if progress < 0.3 else "#fbbf24" if progress < 0.7 else "#f43f5e"
+    with col_s4:
+        st.markdown(f"""
+        <div class='kpi-card' style='border-bottom:3px solid {statut_color}'>
+            <div style='font-size:1.6rem;margin-bottom:.35rem'>{statut_icon}</div>
+            <div style='font-family:"DM Serif Display",serif;font-size:1.1rem;
+                        color:{statut_color};line-height:1.2;font-weight:700'>
+                {statut_txt}
+            </div>
+            <div class='kpi-lbl' style='margin-top:.35rem'>Statut clinique</div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── Barre de progression avancée ────────────────────────
+    segments = []
+    for i in range(CAPACITE_MAX):
+        if i < nb_patients:
+            if nb_patients / CAPACITE_MAX < 0.5:
+                seg_col = "#34d399"
+            elif nb_patients / CAPACITE_MAX < 0.8:
+                seg_col = "#fbbf24"
+            else:
+                seg_col = "#f43f5e"
+        else:
+            seg_col = "#172847"
+        segments.append(f"""<div style='flex:1;height:28px;background:{seg_col};
+            border-radius:4px;margin:0 1px;transition:background .3s'></div>""")
 
     st.markdown(f"""
-    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:14px;
-                padding:1.5rem;margin-top:1rem'>
-        <div style='display:flex;justify-content:space-between;margin-bottom:.8rem'>
-            <span style='color:#4a6080;font-size:.8rem'>Occupation de la clinique</span>
-            <span style='color:{bar_color};font-weight:700'>
-                {st.session_state.patient_counter}/20
+    <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:16px;
+                padding:1.6rem 1.8rem;margin-top:1rem'>
+        <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem'>
+            <span style='color:#4a6080;font-size:.82rem;font-weight:600'>
+                📊 Occupation — {nb_patients} sur {CAPACITE_MAX} places
+            </span>
+            <span style='background:rgba(14,165,233,.1);border:1px solid #0ea5e9;
+                         border-radius:20px;padding:.2rem .8rem;
+                         font-size:.75rem;color:#7dd3fc;font-weight:700'>
+                {places_libres} libre(s)
             </span>
         </div>
-        <div style='background:#172847;border-radius:10px;height:20px;overflow:hidden'>
-            <div style='width:{progress*100:.1f}%;height:100%;background:{bar_color};
-                        border-radius:10px;transition:width .3s ease'></div>
+        <div style='display:flex;gap:2px;margin-bottom:.8rem'>
+            {''.join(segments)}
         </div>
-        <div style='margin-top:1rem;color:#3a5a7a;font-size:.75rem'>
-            {max(0, 20 - st.session_state.patient_counter)} places disponibles
+        <div style='display:flex;justify-content:space-between;font-size:.72rem;color:#334155'>
+            <span>0</span>
+            <span style='color:{statut_color};font-weight:700'>{statut_icon} {statut_txt}</span>
+            <span>{CAPACITE_MAX}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Journal des mouvements ───────────────────────────────
+    if 'patient_log' not in st.session_state:
+        st.session_state.patient_log = []
+
+    # On gère le log au moment des boutons déjà définis plus haut
+    # donc on réinjecte les callbacks via un deuxième bloc de log
+    # Ajout dans le log si le compteur vient de changer
+    if 'last_counter' not in st.session_state:
+        st.session_state.last_counter = nb_patients
+
+    st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Journal des mouvements</div>",
+                unsafe_allow_html=True)
+
+    if not st.session_state.patient_log:
+        st.markdown("""
+        <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;
+                    padding:1.4rem;text-align:center;color:#334155;font-size:.83rem'>
+            Aucun mouvement enregistré pour le moment.
+        </div>""", unsafe_allow_html=True)
+    else:
+        log_html = ""
+        for entry in reversed(st.session_state.patient_log[-10:]):
+            e_color = "#34d399" if entry["type"] == "arrivée" else "#f43f5e" if entry["type"] == "sortie" else "#64748b"
+            e_icon  = "➕" if entry["type"] == "arrivée" else "➖" if entry["type"] == "sortie" else "🔄"
+            log_html += f"""
+            <div style='display:flex;align-items:center;gap:1rem;padding:.55rem .8rem;
+                        border-bottom:1px solid rgba(255,255,255,.04);font-size:.81rem'>
+                <span style='color:{e_color};font-size:1rem;width:20px;text-align:center'>{e_icon}</span>
+                <span style='color:#64748b;font-family:"JetBrains Mono",monospace;font-size:.72rem;
+                             flex-shrink:0'>{entry["heure"]}</span>
+                <span style='color:#e2e8f0;flex:1'>{entry["message"]}</span>
+                <span style='background:{e_color}22;color:{e_color};border-radius:20px;
+                             padding:.1rem .6rem;font-size:.68rem;font-weight:700'>
+                    {entry["total"]} pat.
+                </span>
+            </div>"""
+        st.markdown(f"""
+        <div style='background:#0d1a2e;border:1px solid #1e3456;border-radius:12px;overflow:hidden'>
+            {log_html}
+        </div>""", unsafe_allow_html=True)
+
+    # Bouton vider le journal
+    if st.session_state.patient_log:
+        if st.button("🗑️  Vider le journal", key="btn_clear_log"):
+            st.session_state.patient_log = []
+            st.rerun()
 
 
 # ── DOCTOR Page 1 : Exploration Clinique ────────────────────
