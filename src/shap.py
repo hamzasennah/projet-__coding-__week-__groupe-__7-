@@ -39,4 +39,17 @@ def load_data_and_model():
     model = joblib.load(MODEL_PATH)
 
     return model, X_test.values, y_test.values, feature_names, y.unique()
+# ── Plot 1 : SHAP Summary (beeswarm) ─────────────────────────────────────────
+def generate_shap_plots():
+    """
+    Génère et sauvegarde :
+    - models/shap_summary.png  (beeswarm)
+    - models/shap_bar.png      (importance globale)
+    """
+    print("📦 Chargement du modèle et des données...")
+    model, X_test, y_test, feature_names, classes = load_data_and_model()
+
+    print("🔍 Calcul des SHAP values (200 samples)...")
+    explainer   = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_test[:200])
 
