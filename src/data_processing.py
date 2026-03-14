@@ -116,3 +116,21 @@ for i, col in enumerate(numeric_cols):
     plt.title(col)
 plt.tight_layout()
 plt.show()
+plt.figure(figsize=(8, 5))
+sns.countplot(x=df["NObeyesdad"])
+
+labels = [
+    "Insufficient Weight",
+    "Normal Weight",
+    "Overweight I",
+    "Overweight II",
+    "Obesity I",
+    "Obesity II",
+    "Obesity III"
+]
+
+plt.xticks(ticks=range(len(labels)), labels=labels, rotation=30)
+plt.title("Distribution of Obesity Classes")
+plt.xlabel("Obesity Level")
+plt.ylabel("Count")
+plt.subplots_adjust(bottom=0.25)
