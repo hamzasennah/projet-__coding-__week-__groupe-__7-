@@ -40,3 +40,8 @@ yes_no_cols = ['family_history_with_overweight', 'FAVC', 'SMOKE', 'SCC']
 for col in yes_no_cols:
     df[col] = df[col].str.lower()
     df[col] = df[col].map({'yes': 1, 'no': 0})
+df['NObeyesdad'] = df['NObeyesdad'].astype('category').cat.codes
+df['Gender']     = df['Gender'].map({'Male': 0, 'Female': 1})
+df['CAEC']       = df['CAEC'].apply(lambda x: 3 if x == 'Always' else (2 if x == 'Frequently' else (1 if x == 'Sometimes' else 0)))
+df['CALC']       = df['CALC'].apply(lambda x: 3 if x == 'Always' else (2 if x == 'Frequently' else (1 if x == 'Sometimes' else 0)))
+df['MTRANS']     = df['MTRANS'].map({'Automobile': 0, 'Bike': 1, 'Motorbike': 2, 'Public_Transportation': 3, 'Walking': 4})
