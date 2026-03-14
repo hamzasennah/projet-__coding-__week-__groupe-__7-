@@ -12,7 +12,7 @@
 
 ---
 
-## 📋 Table des matières
+## Table des matières
 
 1. [Description du projet](#-description-du-projet)
 2. [Architecture du projet](#-architecture-du-projet)
@@ -30,7 +30,7 @@
 
 ---
 
-## 📌 Description du projet
+## Description du projet
 
 Ce projet est un **outil clinique d'aide à la décision** développé pour aider les médecins à estimer le **niveau de risque d'obésité** de leurs patients en se basant sur leurs habitudes alimentaires et leurs conditions physiques.
 
@@ -41,7 +41,7 @@ La solution repose sur des modèles de **machine learning interprétables** (exp
 
 ---
 
-## 📁 Architecture du projet
+## Architecture du projet
 
 ```
 projet/
@@ -73,7 +73,7 @@ projet/
 
 ---
 
-## 🛠️ Technologies utilisées
+## Technologies utilisées
 
 | Catégorie | Outils |
 |---|---|
@@ -89,7 +89,7 @@ projet/
 
 ---
 
-## 🚀 Installation et lancement
+## Installation et lancement
 
 ### Prérequis
 
@@ -135,7 +135,7 @@ docker run -p 8501:8501 obesity-app
 
 ---
 
-## 📊 Analyse exploratoire des données (EDA)
+## Analyse exploratoire des données (EDA)
 
 > Notebook complet : `notebooks/eda.ipynb`
 
@@ -171,7 +171,7 @@ Des corrélations fortes ont été identifiées entre certaines variables (ex. :
 
 ---
 
-## 🤖 Modèles ML et performances
+## Modèles ML et performances
 
 Trois modèles ont été entraînés et comparés :
 
@@ -188,7 +188,7 @@ LightGBM a été sélectionné pour sa combinaison de **performances élevées**
 
 ---
 
-## 🔍 Explicabilité SHAP
+## Explicabilité SHAP
 
 SHAP (SHapley Additive exPlanations) a été intégré pour garantir la **transparence des prédictions** auprès des médecins.
 
@@ -214,7 +214,7 @@ Les explications SHAP sont **directement accessibles depuis l'interface** Stream
 
 ---
 
-## ⚡ Optimisation mémoire
+## Optimisation mémoire
 
 Une fonction `optimize_memory(df)` a été implémentée dans `src/data_processing.py` pour réduire l'empreinte mémoire du dataset.
 
@@ -242,7 +242,7 @@ def optimize_memory(df):
 
 ---
 
-## 🧪 Tests automatisés & CI/CD
+## Tests automatisés & CI/CD
 
 ### Tests (Pytest)
 
@@ -267,7 +267,7 @@ Le fichier `.github/workflows/ci.yml` déclenche automatiquement à chaque `push
 
 ---
 
-## 🧠 Prompt Engineering
+## Prompt Engineering
 
 ### Tâche choisie : Fonction `optimize_memory(df)`
 
@@ -294,7 +294,7 @@ DataFrame and print the memory usage before and after."
 
 ---
 
-## ❓ Questions critiques
+## Questions critiques
 
 ### 1. Le dataset était-il équilibré ?
 
