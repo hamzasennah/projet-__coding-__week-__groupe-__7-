@@ -302,9 +302,8 @@ Oui, la distribution des 7 classes était relativement équilibrée (~12–15% p
 
 ### 2. Quel modèle ML a obtenu les meilleures performances ?
 
-**LightGBM** a obtenu les meilleures performances avec un ROC-AUC de ~XX% et un F1-score de ~XX%. Il surpasse Random Forest et XGBoost en termes de rapidité et de précision sur ce dataset multiclasses.
+**LightGBM** a obtenu les meilleures performances avec un ROC-AUC de 0.9991% et un F1-score de 0.9735%. Il surpasse Random Forest et XGBoost en termes de rapidité et de précision sur ce dataset multiclasses.
 
-> ✏️ *Complétez avec vos métriques réelles.*
 
 ### 3. Quelles features médicales ont le plus influencé les prédictions ?
 
@@ -335,20 +334,6 @@ Le prompt engineering a permis de générer rapidement un squelette de code fonc
 ## 👥 Équipe
 
 Projet réalisé par le **Groupe 7** — Coding Week, Centrale Casablanca (Mars 2026)
-
-| Nom | Rôle principal |
-|---|---|
-| Hamza Sennah | Chef de projet / ML Engineer |
-| Membre 2 | Data preprocessing & EDA |
-| Membre 3 | Modélisation ML & évaluation |
-| Membre 4 | Interface Streamlit & SHAP |
-| Membre 5 | Tests & CI/CD |
-
-> ✏️ *Complétez avec les noms et rôles réels des membres du groupe.*
-
-**Encadrement :** K. Zerhouni & Team — Centrale Casablanca
-
----
 
 <p align="center">
   Réalisé avec ❤️ par le <strong>Groupe 7</strong> · Coding Week · Centrale Casablanca · Mars 2026
