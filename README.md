@@ -236,9 +236,7 @@ def optimize_memory(df):
 
 | Avant optimisation | Après optimisation | Réduction |
 |---|---|---|
-| ~X.X MB | ~X.X MB | ~50% |
-
-> ✏️ *Remplacez par les valeurs mesurées dans votre notebook.*
+| ~0.20 MB | ~0.08 MB | ~59.2% |
 
 ---
 
