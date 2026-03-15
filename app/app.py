@@ -1,3 +1,4 @@
+import os
 import re
 import streamlit as st
 import pandas as pd
@@ -55,6 +56,29 @@ COUNTRY_CODES = [
 ]
 CC_DISPLAY  = [f"{name}  {code}" for name, code in COUNTRY_CODES]
 CC_CODE_MAP = {f"{name}  {code}": code for name, code in COUNTRY_CODES}
+
+# ── Phone number examples per country code (real format examples) ──
+CC_EXAMPLES = {
+    "+212": "Ex : 0661234567   — Mobile Maroc (IAM / Orange / Inwi)",
+    "+33":  "Ex : 0623456789   — Mobile France (SFR / Orange / Free)",
+    "+213": "Ex : 0551234567   — Mobile Algérie (Djezzy / Ooredoo / Mobilis)",
+    "+216": "Ex : 20123456     — Mobile Tunisie (Tunisie Telecom / Ooredoo)",
+    "+966": "Ex : 0501234567   — Mobile Arabie Saoudite (STC / Mobily)",
+    "+971": "Ex : 0501234567   — Mobile UAE (Etisalat / du)",
+    "+1":   "Ex : 2025551234   — Mobile USA (format 10 chiffres sans 0)",
+    "+44":  "Ex : 07700900123  — Mobile UK (format 07XXX XXXXXX)",
+    "+49":  "Ex : 01512345678  — Mobile Allemagne (Telekom / Vodafone)",
+    "+32":  "Ex : 0470123456   — Mobile Belgique (Proximus / Base)",
+    "+34":  "Ex : 612345678    — Mobile Espagne (Movistar / Vodafone)",
+    "+39":  "Ex : 3201234567   — Mobile Italie (TIM / Vodafone / Wind)",
+    "+351": "Ex : 912345678    — Mobile Portugal (MEO / NOS / Vodafone)",
+    "+31":  "Ex : 0612345678   — Mobile Pays-Bas (KPN / T-Mobile)",
+    "+41":  "Ex : 0791234567   — Mobile Suisse (Swisscom / Salt)",
+    "+221": "Ex : 771234567    — Mobile Sénégal (Orange / Free)",
+    "+222": "Ex : 36123456     — Mobile Mauritanie (Mauritel / Chinguitel)",
+    "+218": "Ex : 0911234567   — Mobile Libye (Libyana / Madar)",
+    "+20":  "Ex : 01001234567  — Mobile Égypte (Vodafone / Orange / Etisalat)",
+}
 
 # ═══════════════════════════════════════════════════════════
 #  HELPERS — TIME
@@ -133,6 +157,47 @@ st.markdown("""
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* ── FORCE DARK THEME — override any Streamlit light-mode remnants ── */
+:root {
+    color-scheme: dark !important;
+}
+html {
+    filter: none !important;
+    background: #041018 !important;
+}
+/* Kill the white flash on initial load */
+body { background-color: #041018 !important; }
+/* Kill Streamlit's internal light dividers and backgrounds */
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stHeader"] {
+    background: rgba(4,16,24,0.95) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,212,180,0.12) !important;
+}
+[data-testid="stToolbar"] { background: transparent !important; }
+/* Force all text inputs/selects dark */
+input, select, textarea {
+    background-color: rgba(14,26,48,0.95) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+/* Force all white backgrounds to dark */
+.stTextInput input, .stNumberInput input {
+    background: rgba(14,26,48,0.95) !important;
+    color: #e2e8f0 !important;
+}
+/* Plotly / chart containers */
+.js-plotly-plot, .plotly { background: transparent !important; }
+/* Expanders */
+.streamlit-expanderHeader {
+    background: rgba(10,22,40,0.9) !important;
+    color: #e2e8f0 !important;
+}
+/* Tables */
+.stDataFrame { color: #e2e8f0 !important; }
+/* Remove any white overlay */
+[class*="st-"] { background-color: transparent; }
+
 /* ══════════════════════════════════════════════════════
    CLINICAL BACKGROUND — VISIBLE MEDICAL ATMOSPHERE
 ══════════════════════════════════════════════════════ */
@@ -155,21 +220,26 @@ st.markdown("""
 
 html, body,
 [data-testid="stAppViewContainer"],
-[data-testid="stApp"] {
+[data-testid="stApp"],
+[data-testid="stAppViewBlockContainer"],
+.stApp, .main {
     background-color: #041018 !important;
     color: #e2e8f0 !important;
     font-family: "DM Sans", sans-serif !important;
 }
 
 [data-testid="stMain"],
-.main, .block-container, [class*="css"] {
+[data-testid="stMainBlockContainer"],
+.block-container {
     background-color: transparent !important;
     color: #e2e8f0 !important;
     font-family: "DM Sans", sans-serif !important;
 }
 
 /* ── Rich layered background ── */
-[data-testid="stAppViewContainer"] {
+[data-testid="stAppViewContainer"],
+[data-testid="stApp"],
+.stApp {
     background-color: #030b14 !important;
     background-image:
         /* Fine dot grid — clearly visible */
@@ -239,6 +309,18 @@ section[data-testid="stSidebar"] {
     backdrop-filter: blur(20px);
     box-shadow: 4px 0 30px rgba(0,0,0,0.5);
     position: relative;
+    overflow-y: auto !important;
+    min-height: 100vh;
+}
+section[data-testid="stSidebar"] > div:first-child {
+    overflow-y: auto !important;
+    max-height: 100vh;
+    padding-bottom: 2rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    overflow-y: auto !important;
+    max-height: 100vh;
+    padding-bottom: 2rem !important;
 }
 section[data-testid="stSidebar"]::before {
     content: "";
@@ -251,8 +333,8 @@ section[data-testid="stSidebar"]::before {
 section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
 section[data-testid="stSidebar"] hr { border-color: rgba(0,212,180,0.10) !important; }
 section[data-testid="stSidebar"] .stRadio label {
-    font-size: .86rem !important;
-    padding: .52rem .75rem !important;
+    font-size: .82rem !important;
+    padding: .38rem .65rem !important;
     border-radius: 8px;
     margin: 2px 0 !important;
     transition: all .18s;
@@ -688,7 +770,7 @@ MTRANS_MAP = {"Automobile":0,"Vélo":1,"Moto":2,"Transport en commun":3,"Marche"
 
 ROLES       = ["👩‍⚕️  Infirmière — Saisie Patient","👨‍⚕️  Médecin — Analyse & Diagnostic"]
 NURSE_PAGES = ["📋  Dossier Patient","📏  Questionnaire Clinique","🏥  Tableau de Bord"]
-DOC_PAGES   = ["🩺  Diagnostic IA","📁  Historique Patients"]
+DOC_PAGES   = ["🩺  Diagnostic IA","📁  Historique Patients","📊  Statistiques Cliniques","💊  Protocoles de Soins","🔬  Analyse IA Globale"]
 
 FEATURE_LABELS = {
     "Gender":"Genre","Age":"Âge","Height":"Taille (m)","Weight":"Poids (kg)",
@@ -743,11 +825,35 @@ def set_dark_mpl():
 
 @st.cache_data
 def load_data():
-    for p in ["data_clean.csv","data/data_clean.csv","../data/data_clean.csv",
-              "/mnt/user-data/uploads/data_clean__2_.csv"]:
-        try: return pd.read_csv(p)
-        except: pass
-    st.error("❌ data_clean.csv introuvable."); st.stop()
+    import os
+    # Resolve paths relative to this script file
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        script_dir = os.getcwd()
+    candidates = [
+        # Same folder as app.py (development / flat layout)
+        os.path.join(script_dir, "data_clean.csv"),
+        # ../data/data_clean.csv  (new repo: app/app.py → data/data_clean.csv)
+        os.path.join(script_dir, "..", "data", "data_clean.csv"),
+        # Root-level data_clean.csv
+        os.path.join(script_dir, "..", "data_clean.csv"),
+        # CWD fallbacks
+        "data_clean.csv",
+        "data/data_clean.csv",
+        "../data/data_clean.csv",
+        # Upload path (Claude environment)
+        "/mnt/user-data/uploads/data_clean__2_.csv",
+        "/mnt/user-data/uploads/data_clean__3_.csv",
+    ]
+    for p in candidates:
+        try:
+            df = pd.read_csv(p)
+            return df
+        except Exception:
+            pass
+    st.error("❌ data_clean.csv introuvable. Vérifiez que le fichier est dans data/ ou à la racine du projet.")
+    st.stop()
 
 @st.cache_resource
 def train_model(algo=BEST_ALGO):
@@ -812,21 +918,64 @@ def plot_waterfall(exp,psv,pc,pdata,fc,cname,ccol):
                     f"{v:+.3f}",va="center",ha="left" if v>=0 else "right",fontsize=7.5,color="#e2e8f0",fontweight="700")
     plt.tight_layout(); return fig
 
-def plot_global_imp(sv,fc,nc,ccol):
+def plot_global_imp(sv, fc, nc, ccol):
+    """
+    Stacked bar chart — Feature Importance SHAP par classe.
+    Reproduit le style du graphique officiel du projet (shap_bar.png).
+    """
     set_dark_mpl()
-    imp=global_shap_imp(sv,nc); sidx=np.argsort(imp)
-    fig,ax=plt.subplots(figsize=(7,5))
-    fig.patch.set_facecolor("#0a1628"); ax.set_facecolor("#101f38")
-    bc=[ccol if i==sidx[-1] else ("#a78bfa" if i==sidx[-2] else "#00d4b4") for i in sidx]
-    ax.barh(range(len(sidx)),imp[sidx],color=bc,edgecolor="none",height=.62)
-    ax.set_yticks(range(len(sidx)))
-    ax.set_yticklabels([FEATURE_LABELS.get(fc[i],fc[i]) for i in sidx],fontsize=8.5,color="#e2e8f0")
-    ax.set_xlabel("Importance SHAP moyenne",fontsize=9,color="#94a3b8")
-    ax.set_title("Importance Globale des Variables",fontsize=11,color="#e2e8f0",pad=12,fontweight="600")
-    ax.spines[["top","right","left"]].set_visible(False); ax.grid(axis="x",alpha=.15,linestyle="--")
-    for i,v in enumerate(imp[sidx]):
-        ax.text(v+imp.max()*.01,i,f"{v:.4f}",va="center",fontsize=7.5,color="#64748b",fontweight="600")
-    plt.tight_layout(); return fig
+
+    # Per-class mean |SHAP| for each feature
+    per_class = []
+    for c in range(nc):
+        sv_c = get_shap_class(sv, c)
+        per_class.append(np.abs(sv_c).mean(axis=0))  # shape (n_features,)
+
+    # Sort by total importance descending
+    total_imp = np.sum(per_class, axis=0)
+    sidx = np.argsort(total_imp)  # ascending for barh (bottom = least)
+
+    feat_labels = [FEATURE_LABELS.get(fc[i], fc[i]) for i in sidx]
+    y_pos = np.arange(len(sidx))
+
+    # Class colors matching the notebook palette
+    CLASS_COLORS_BAR = [
+        "#2196F3",  # Class 0 — blue
+        "#9C27B0",  # Class 1 — violet
+        "#E91E63",  # Class 2 — pink
+        "#FF1744",  # Class 3 — red
+        "#FF6D00",  # Class 4 — orange
+        "#4CAF50",  # Class 5 — green
+        "#00BCD4",  # Class 6 — cyan
+    ]
+
+    fig, ax = plt.subplots(figsize=(9, 6))
+    fig.patch.set_facecolor("#0a1628")
+    ax.set_facecolor("#101f38")
+
+    lefts = np.zeros(len(sidx))
+    for c in range(nc):
+        vals = np.array([per_class[c][i] for i in sidx])
+        ax.barh(y_pos, vals, left=lefts,
+                color=CLASS_COLORS_BAR[c % len(CLASS_COLORS_BAR)],
+                alpha=0.88, height=0.62, label=f"Class {c}",
+                edgecolor="none")
+        lefts += vals
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(feat_labels, fontsize=9, color="#e2e8f0")
+    ax.set_xlabel("Importance SHAP moyenne (impact sur la prédiction)", fontsize=9, color="#94a3b8")
+    ax.set_title("Feature Importance — Valeurs SHAP Moyennes",
+                 fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.grid(axis="x", alpha=0.15, linestyle="--")
+    leg = ax.legend(title="Classe", fontsize=7.5, title_fontsize=7.5,
+                    loc="lower right",
+                    facecolor="#0a1628", edgecolor="#2d3a52",
+                    labelcolor="#e2e8f0")
+    leg.get_title().set_color("#64748b")
+    plt.tight_layout()
+    return fig
 
 def generate_insights(sv,fc,pc,cname):
     out=[]; order=np.argsort(np.abs(sv))[::-1]
@@ -844,9 +993,9 @@ def generate_insights(sv,fc,pc,cname):
 # ═══════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown("""
-    <div style='padding:1.3rem 0 .5rem;text-align:center;position:relative'>
-        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"
-             style="display:block;margin:0 auto .6rem">
+    <div style='padding:.7rem 0 .4rem;text-align:center;position:relative'>
+        <svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"
+             style="display:block;margin:0 auto .4rem">
             <defs>
                 <radialGradient id="rg1" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#00d4b4" stop-opacity="0.25"/>
@@ -874,9 +1023,9 @@ with st.sidebar:
             <circle cx="32" cy="32" r="4" fill="#060d1b" opacity="0.8"/>
             <circle cx="32" cy="32" r="2" fill="#00d4b4" opacity="0.7"/>
         </svg>
-        <div style='font-family:"DM Serif Display",serif;font-size:1.5rem;color:#f1f5f9;letter-spacing:.02em'>ObesoScan</div>
+        <div style='font-family:"DM Serif Display",serif;font-size:1.3rem;color:#f1f5f9;letter-spacing:.02em'>ObesoScan</div>
         <div style='font-size:.62rem;color:#334155;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-top:3px'>
-            Système Clinique IA · v2.1
+            Clinique IA · v2.1
         </div>
         <div style='display:inline-flex;align-items:center;gap:.35rem;margin-top:.5rem;
                     background:rgba(0,212,180,.08);border:1px solid rgba(0,212,180,.18);
@@ -886,17 +1035,15 @@ with st.sidebar:
             <span style='font-size:.65rem;color:#00d4b4;font-weight:700;letter-spacing:.06em'>EN LIGNE</span>
         </div>
     </div>""", unsafe_allow_html=True)
-    st.divider()
-
-    st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.5rem'>Rôle</div>",unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
+    st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.3rem'>Rôle</div>",unsafe_allow_html=True)
     role      = st.radio("role", ROLES, label_visibility="collapsed")
     is_nurse  = role == ROLES[0]
     is_doctor = not is_nurse
-    st.divider()
-
-    st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.5rem'>Navigation</div>",unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
+    st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.3rem'>Navigation</div>",unsafe_allow_html=True)
     page = st.radio("nav", NURSE_PAGES if is_nurse else DOC_PAGES, label_visibility="collapsed")
-    st.divider()
+    st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
 
     if is_doctor:
         greeting = get_greeting()
@@ -970,7 +1117,8 @@ if is_nurse and page == NURSE_PAGES[0]:
         # Country code + phone
         tel_cc = st.selectbox("Indicatif pays *", CC_DISPLAY, index=0, key="n_cc")
         sel_code = CC_CODE_MAP[tel_cc]
-        tel_val = st.text_input(f"Numéro de téléphone * ({sel_code})", placeholder="Ex : 0612345678", key="n_tel")
+        phone_placeholder = CC_EXAMPLES.get(sel_code, f"Ex : numéro local ({sel_code})")
+        tel_val = st.text_input(f"Numéro de téléphone * ({sel_code})", placeholder=phone_placeholder, key="n_tel")
         ok_tel, msg_tel = validate_phone(tel_val, sel_code) if tel_val else (None,"")
         if tel_val:
             cls="val-ok" if ok_tel else "val-err"; icon="✅" if ok_tel else "❌"
@@ -1652,3 +1800,461 @@ elif is_doctor and page == DOC_PAGES[1]:
         if st.button("🗑️  Effacer l'historique",key="btn_clear_hist"):
             st.session_state["patient_history"]=[]
             st.rerun()
+
+
+# ╔══════════════════════════════════════════════════════════╗
+#  DOCTOR — Page 3 : Statistiques Cliniques
+# ╚══════════════════════════════════════════════════════════╝
+elif is_doctor and page == DOC_PAGES[2]:
+    st.markdown("""
+    <div class='page-banner banner-doctor'>
+        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-h1'>Statistiques Cliniques</div>
+        <div class='banner-sub'>Synthèse agrégée des patients diagnostiqués · Session en cours</div>
+        <span class='banner-tag'>session-stats</span><span class='banner-tag'>épidémiologie</span>
+    </div>""", unsafe_allow_html=True)
+
+    hist = st.session_state["patient_history"]
+
+    if not hist:
+        st.markdown("""
+        <div class='panel p-amber'>
+            <div class='panel-title'>⚠️ Aucun diagnostic disponible</div>
+            <div class='panel-body'>Effectuez des diagnostics depuis <strong>Diagnostic IA</strong> pour voir les statistiques de session.</div>
+        </div>""", unsafe_allow_html=True)
+    else:
+        n = len(hist)
+        imcs   = [h.get("imc", 0) for h in hist]
+        ages   = [h.get("age", 0) for h in hist]
+        genres = [h.get("genre","—") for h in hist]
+        diags  = [h.get("diagnostic","—") for h in hist]
+        colors = [h.get("color","green") for h in hist]
+
+        n_h    = sum(1 for c in colors if c == "red")
+        n_s    = sum(1 for c in colors if c == "amber")
+        n_n    = sum(1 for c in colors if c == "green")
+        n_m    = sum(1 for g in genres if g == "H")
+        n_f    = sum(1 for g in genres if g == "F")
+        imc_m  = round(np.mean(imcs), 1)
+        imc_max= round(max(imcs), 1)
+        age_m  = round(np.mean(ages), 1)
+        risk_pct = round(n_h / n * 100, 1) if n else 0
+
+        # KPI row
+        st.markdown("<div class='sec-head'><div class='dot dot-teal'></div>Indicateurs de session</div>", unsafe_allow_html=True)
+        k1,k2,k3,k4,k5,k6 = st.columns(6)
+        kpis = [
+            (k1,"c-violet", str(n), "Patients diagnostiqués"),
+            (k2,"c-red",    str(n_h), "Cas obésité"),
+            (k3,"c-amber",  str(n_s), "Cas surpoids"),
+            (k4,"c-green",  str(n_n), "Profil normal"),
+            (k5,"c-blue",   str(imc_m), "IMC moyen"),
+            (k6,"c-amber",  f"{risk_pct}%", "Taux obésité"),
+        ]
+        for col, cls, val, lbl in kpis:
+            col.markdown(f"<div class='kpi-card {cls}'><div class='kpi-num'>{val}</div><div class='kpi-lbl'>{lbl}</div></div>", unsafe_allow_html=True)
+
+        c1, c2 = st.columns(2, gap="large")
+
+        with c1:
+            st.markdown("<div class='sec-head'><div class='dot dot-violet'></div>Répartition des diagnostics</div>", unsafe_allow_html=True)
+            diag_counts = {}
+            for d, col in zip(diags, colors):
+                diag_counts[d] = diag_counts.get(d, (0, col))
+                diag_counts[d] = (diag_counts[d][0] + 1, col)
+            fig_d, ax_d = dark_fig(6, 4)
+            labels_d = list(diag_counts.keys())
+            vals_d   = [v[0] for v in diag_counts.values()]
+            cols_d   = [{"green":"#22c55e","amber":"#f59e0b","red":"#ef4444"}.get(v[1],"#94a3b8") for v in diag_counts.values()]
+            bars_d = ax_d.barh(labels_d, vals_d, color=cols_d, edgecolor="none", height=.6)
+            for b, v in zip(bars_d, vals_d):
+                ax_d.text(v + .03, b.get_y() + b.get_height()/2, str(v), va="center", fontsize=9, color="#e2e8f0", fontweight="700")
+            ax_d.spines[["top","right","left"]].set_visible(False)
+            ax_d.grid(axis="x", alpha=.15, linestyle="--")
+            ax_d.set_xlabel("Nombre de patients", fontsize=9, color="#64748b")
+            plt.tight_layout(); st.pyplot(fig_d, use_container_width=True)
+
+        with c2:
+            st.markdown("<div class='sec-head'><div class='dot dot-nurse'></div>Distribution des IMC</div>", unsafe_allow_html=True)
+            fig_i, ax_i = dark_fig(6, 4)
+            ax_i.hist(imcs, bins=min(15, n), color="#00d4b4", edgecolor="none", alpha=.85)
+            ax_i.axvline(imc_m, color="#f59e0b", lw=2, linestyle="--", label=f"Moy {imc_m}")
+            ax_i.axvline(25, color="#ef4444", lw=1.5, linestyle=":", alpha=.7, label="Seuil surpoids (25)")
+            ax_i.axvline(30, color="#8b5cf6", lw=1.5, linestyle=":", alpha=.7, label="Seuil obésité (30)")
+            ax_i.set_xlabel("IMC", fontsize=9, color="#64748b")
+            ax_i.set_ylabel("Patients", fontsize=9, color="#64748b")
+            ax_i.spines[["top","right"]].set_visible(False)
+            ax_i.grid(alpha=.15, linestyle="--")
+            ax_i.legend(fontsize=7.5)
+            plt.tight_layout(); st.pyplot(fig_i, use_container_width=True)
+
+        c3, c4 = st.columns(2, gap="large")
+        with c3:
+            st.markdown("<div class='sec-head'><div class='dot dot-green'></div>Genre & Tranche d'âge</div>", unsafe_allow_html=True)
+            fig_g, axes_g = dark_fig(6, 4, ncols=2)
+            # Gender
+            axes_g[0].bar(["Hommes","Femmes"], [n_m, n_f], color=["#3b82f6","#ec4899"], edgecolor="none", width=.5)
+            axes_g[0].set_title("Genre", fontsize=9, color="#94a3b8")
+            axes_g[0].spines[["top","right"]].set_visible(False)
+            # Age groups
+            age_groups = {"< 25": 0, "25-40": 0, "40-55": 0, "55+": 0}
+            for a in ages:
+                if a < 25:    age_groups["< 25"] += 1
+                elif a < 40:  age_groups["25-40"] += 1
+                elif a < 55:  age_groups["40-55"] += 1
+                else:         age_groups["55+"]   += 1
+            axes_g[1].bar(age_groups.keys(), age_groups.values(), color=["#00d4b4","#3b82f6","#f59e0b","#ef4444"], edgecolor="none", width=.55)
+            axes_g[1].set_title("Tranche d'âge", fontsize=9, color="#94a3b8")
+            axes_g[1].spines[["top","right"]].set_visible(False)
+            for ax in axes_g: ax.grid(axis="y", alpha=.15, linestyle="--")
+            plt.tight_layout(); st.pyplot(fig_g, use_container_width=True)
+
+        with c4:
+            st.markdown("<div class='sec-head'><div class='dot dot-amber'></div>Résumé épidémiologique</div>", unsafe_allow_html=True)
+            epi_rows = [
+                ("Patients analysés", str(n)),
+                ("IMC moyen", f"{imc_m}"),
+                ("IMC maximum", f"{imc_max}"),
+                ("Âge moyen", f"{age_m} ans"),
+                ("Hommes / Femmes", f"{n_m} / {n_f}"),
+                ("Taux obésité", f"{risk_pct}%"),
+                ("Taux surpoids", f"{round(n_s/n*100,1)}%"),
+                ("Profil sain", f"{round(n_n/n*100,1)}%"),
+            ]
+            html_rows = "".join([
+                f"<div class='stat-row'><span class='sk'>{k}</span><span class='sv'>{v}</span></div>"
+                for k, v in epi_rows
+            ])
+            st.markdown(f"<div class='form-section'>{html_rows}</div>", unsafe_allow_html=True)
+
+
+# ╔══════════════════════════════════════════════════════════╗
+#  DOCTOR — Page 4 : Protocoles de Soins
+# ╚══════════════════════════════════════════════════════════╝
+elif is_doctor and page == DOC_PAGES[3]:
+    st.markdown("""
+    <div class='page-banner banner-doctor'>
+        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-h1'>Protocoles de Soins</div>
+        <div class='banner-sub'>Recommandations cliniques officielles OMS par classe d'obésité · Référence médicale</div>
+        <span class='banner-tag'>OMS-2024</span><span class='banner-tag'>guidelines</span>
+    </div>""", unsafe_allow_html=True)
+
+    PROTOCOLS = {
+        0: {
+            "label": "Poids Insuffisant", "imc": "IMC < 18.5", "color": "#3b82f6",
+            "icon": "⚖️",
+            "bilan": ["Bilan nutritionnel complet", "NFS + ferritine + albumine", "TSH — bilan thyroïdien", "ECG si bradycardie associée"],
+            "alimentation": ["Augmenter les apports caloriques : +500 kcal/j", "3 repas + 2 collations riches en protéines", "Supplémentation : vitamines B12, D, Fer, Oméga-3", "Éviter le jeûne prolongé"],
+            "activite": ["Musculation légère 2×/sem pour gain de masse", "Yoga ou étirements — éviter cardio intense", "Suivi régulier de la composition corporelle"],
+            "suivi": "Mensuel — nutritionniste + médecin généraliste",
+            "urgence": False,
+        },
+        1: {
+            "label": "Poids Normal", "imc": "18.5 ≤ IMC < 25", "color": "#22c55e",
+            "icon": "✅",
+            "bilan": ["Bilan lipidique annuel", "Glycémie à jeun tous les 3 ans", "Tension artérielle à chaque consultation"],
+            "alimentation": ["Maintenir alimentation équilibrée — régime méditerranéen", "5 fruits et légumes/jour (OMS)", "Limiter ultra-transformés et sucres ajoutés"],
+            "activite": ["150 min/sem d'activité modérée (OMS)", "Renforcement musculaire 2×/sem", "Marche quotidienne recommandée"],
+            "suivi": "Annuel — médecin généraliste",
+            "urgence": False,
+        },
+        5: {
+            "label": "Surpoids Niveau I", "imc": "25 ≤ IMC < 27.5", "color": "#fbbf24",
+            "icon": "⚠️",
+            "bilan": ["Bilan lipidique (CT, HDL, LDL, TG)", "Glycémie à jeun + HbA1c", "Tension artérielle + fréquence cardiaque", "Tour de taille"],
+            "alimentation": ["Déficit calorique modéré : -300 à -500 kcal/j", "Réduire sucres raffinés et graisses saturées", "Augmenter fibres alimentaires (légumineuses, légumes)", "Journalisation alimentaire recommandée"],
+            "activite": ["200 min/sem d'activité modérée", "Marche rapide 30 min/j minimum", "Limiter sédentarité — pause active toutes les heures"],
+            "suivi": "Trimestriel — médecin généraliste + diététicien",
+            "urgence": False,
+        },
+        6: {
+            "label": "Surpoids Niveau II", "imc": "27.5 ≤ IMC < 30", "color": "#f97316",
+            "icon": "⚠️",
+            "bilan": ["Bilan lipidique complet + apolipoprotéines", "Test de tolérance au glucose (HGPO)", "Bilan hépatique (stéatose hépatique)", "Échographie abdominale"],
+            "alimentation": ["Déficit calorique : -500 à -750 kcal/j", "Régime pauvre en graisses saturées et en sucres", "Consultation diététicien pour plan personnalisé", "Arrêt des boissons sucrées"],
+            "activite": ["250 min/sem d'activité physique", "Natation, vélo, marche nordique recommandés", "Kinésithérapie si douleurs articulaires"],
+            "suivi": "Bimestriel — diététicien + médecin + cardiologue si facteur de risque",
+            "urgence": False,
+        },
+        2: {
+            "label": "Obésité Type I", "imc": "30 ≤ IMC < 35", "color": "#ef4444",
+            "icon": "🚨",
+            "bilan": ["Bilan lipidique + cardiovasculaire complet", "HbA1c + HOMA-IR (résistance à l'insuline)", "Bilan hépatique + échographie", "Polysomnographie si suspicion SAOS", "ECG + échocardiographie"],
+            "alimentation": ["Déficit calorique : -750 kcal/j sous supervision", "Régimes structurés : VLCD si IMC > 32 avec comorbidités", "Supplémentation protéique et micronutriments", "Suivi nutritionnel hebdomadaire"],
+            "activite": ["300 min/sem minimum d'activité adaptée", "Programme supervisé par kinésithérapeute", "Éviter sports à fort impact (risque articulaire)"],
+            "suivi": "Mensuel — équipe pluridisciplinaire (endocrinologue, diéticien, cardiologue)",
+            "urgence": True,
+        },
+        3: {
+            "label": "Obésité Type II", "imc": "35 ≤ IMC < 40", "color": "#dc2626",
+            "icon": "🆘",
+            "bilan": ["Bilan cardiovasculaire complet + coronarographie si indiqué", "Diabétologie : HbA1c, C-peptide, insulinémie", "Bilan respiratoire : spirométrie + gazométrie", "Bilan orthopédique", "Évaluation psychologique"],
+            "alimentation": ["Régime très basse calorie (VLCD) : 800–1000 kcal/j sous surveillance", "Supplémentation complète obligatoire", "Évaluation chirurgie bariatrique (sleeve, bypass)"],
+            "activite": ["Programme de réadaptation physique supervisé", "Hydrothérapie si mobilité réduite", "Objectif : -5 à -10% du poids corporel/6 mois"],
+            "suivi": "Hebdomadaire — unité de prise en charge de l'obésité (CHU)",
+            "urgence": True,
+        },
+        4: {
+            "label": "Obésité Type III (morbide)", "imc": "IMC ≥ 40", "color": "#991b1b",
+            "icon": "🏥",
+            "bilan": ["Hospitalisation pour bilan complet multidisciplinaire", "Évaluation pré-chirurgicale bariatrique obligatoire", "Bilan psychiatrique + psychologique", "Bilan anesthésique pré-opératoire"],
+            "alimentation": ["Préparation nutritionnelle pré-opératoire obligatoire", "VLCD ou nutrition entérale si nécessaire", "Suivi post-opératoire nutritionnel à vie"],
+            "activite": ["Programme pré-chirurgical de perte de poids (10%)", "Rééducation physique post-opératoire", "Activité très progressive sous supervision médicale stricte"],
+            "suivi": "Suivi à vie — centre spécialisé CHU + chirurgien bariatrique",
+            "urgence": True,
+        },
+    }
+
+    # Selector
+    class_order = [1, 5, 6, 0, 2, 3, 4]
+    sel_labels = [f"{PROTOCOLS[c]['icon']} {PROTOCOLS[c]['label']} ({PROTOCOLS[c]['imc']})" for c in class_order]
+    sel = st.selectbox("Sélectionner une classe clinique", sel_labels, key="proto_sel")
+    sel_idx = class_order[sel_labels.index(sel)]
+    proto = PROTOCOLS[sel_idx]
+    pcol = proto["color"]
+
+    # Pre-build header HTML to avoid nested f-string rendering issues
+    urgence_badge = (
+        "<div style='margin-left:auto;background:rgba(239,68,68,0.12);"
+        "border:1px solid rgba(239,68,68,0.3);border-radius:8px;"
+        "padding:.3rem .8rem;font-size:.72rem;font-weight:700;color:#fca5a5'>"
+        "&#9888;&#65039; PRISE EN CHARGE URGENTE</div>"
+    ) if proto["urgence"] else ""
+
+    proto_header_html = (
+        f"<div style='background:linear-gradient(135deg,{pcol}18,rgba(5,18,32,0.92));"
+        f"border:1px solid {pcol}55;border-radius:18px;"
+        f"padding:1.6rem 2rem;margin:1rem 0;backdrop-filter:blur(12px)'>"
+        f"<div style='display:flex;align-items:center;gap:1rem;margin-bottom:.5rem'>"
+        f"<span style='font-size:2.5rem'>{proto['icon']}</span>"
+        f"<div style='flex:1'>"
+        f"<div style='font-size:1.45rem;font-weight:700;color:#f1f5f9;margin-bottom:.2rem'>{proto['label']}</div>"
+        f"<div style='font-size:.78rem;color:{pcol};font-weight:700;font-family:monospace'>{proto['imc']}</div>"
+        f"</div>"
+        f"{urgence_badge}"
+        f"</div>"
+        f"</div>"
+    )
+    st.markdown(proto_header_html, unsafe_allow_html=True)
+
+    pc1, pc2 = st.columns(2, gap="large")
+
+    with pc1:
+        # Bilan
+        bilan_html = "".join([
+            f"<div style='display:flex;gap:.6rem;align-items:flex-start;padding:.3rem 0;"
+            f"border-bottom:1px solid rgba(255,255,255,.04)'>"
+            f"<span style='color:#3b82f6;flex-shrink:0;font-weight:700'>›</span>"
+            f"<span style='font-size:.84rem;color:#94a3b8'>{item}</span></div>"
+            for item in proto["bilan"]
+        ])
+        st.markdown(f"""
+        <div class='panel p-blue'>
+            <div class='panel-title'>🔬 Bilan Biologique Recommandé</div>
+            <div class='panel-body'>{bilan_html}</div>
+        </div>""", unsafe_allow_html=True)
+
+        # Suivi
+        st.markdown(f"""
+        <div class='panel p-violet'>
+            <div class='panel-title'>📅 Fréquence de Suivi</div>
+            <div class='panel-body'>{proto["suivi"]}</div>
+        </div>""", unsafe_allow_html=True)
+
+    with pc2:
+        # Alimentation
+        alim_html = "".join([
+            f"<div style='display:flex;gap:.6rem;align-items:flex-start;padding:.3rem 0;"
+            f"border-bottom:1px solid rgba(255,255,255,.04)'>"
+            f"<span style='color:#22c55e;flex-shrink:0;font-weight:700'>›</span>"
+            f"<span style='font-size:.84rem;color:#94a3b8'>{item}</span></div>"
+            for item in proto["alimentation"]
+        ])
+        st.markdown(f"""
+        <div class='panel p-green'>
+            <div class='panel-title'>🥗 Plan Alimentaire</div>
+            <div class='panel-body'>{alim_html}</div>
+        </div>""", unsafe_allow_html=True)
+
+        # Activité
+        activ_html = "".join([
+            f"<div style='display:flex;gap:.6rem;align-items:flex-start;padding:.3rem 0;"
+            f"border-bottom:1px solid rgba(255,255,255,.04)'>"
+            f"<span style='color:#f59e0b;flex-shrink:0;font-weight:700'>›</span>"
+            f"<span style='font-size:.84rem;color:#94a3b8'>{item}</span></div>"
+            for item in proto["activite"]
+        ])
+        st.markdown(f"""
+        <div class='panel p-amber'>
+            <div class='panel-title'>🏃 Programme d'Activité Physique</div>
+            <div class='panel-body'>{activ_html}</div>
+        </div>""", unsafe_allow_html=True)
+
+    # IMC reference chart
+    st.markdown("<div class='sec-head'><div class='dot dot-teal'></div>Référence IMC — Classification OMS</div>", unsafe_allow_html=True)
+    ref_data = [
+        ("< 18.5",  "Poids Insuffisant",  "#3b82f6", 18.5),
+        ("18.5–25", "Poids Normal",        "#22c55e", 6.5),
+        ("25–27.5", "Surpoids Niveau I",   "#fbbf24", 2.5),
+        ("27.5–30", "Surpoids Niveau II",  "#f97316", 2.5),
+        ("30–35",   "Obésité Type I",      "#ef4444", 5.0),
+        ("35–40",   "Obésité Type II",     "#dc2626", 5.0),
+        ("≥ 40",    "Obésité Type III",    "#991b1b", 5.0),
+    ]
+    fig_ref, ax_ref = dark_fig(12, 3.5)
+    left = 10.0
+    for imc_range, label, col, width in ref_data:
+        is_sel = label == proto["label"]
+        alpha = 0.95 if is_sel else 0.5
+        ax_ref.barh([0], [width], left=left, color=col, alpha=alpha, edgecolor="#060d1b", height=.65)
+        ax_ref.text(left + width/2, 0, f"{imc_range}\n{label[:12]}", ha="center", va="center",
+                    fontsize=7.2, color="white" if is_sel else "#94a3b8",
+                    fontweight="bold" if is_sel else "normal")
+        if is_sel:
+            ax_ref.text(left + width/2, .45, "▲", ha="center", fontsize=10, color=col)
+        left += width
+    ax_ref.set_xlim(9, 50); ax_ref.set_ylim(-.5, .8)
+    ax_ref.set_yticks([]); ax_ref.set_xticks([18.5, 25, 27.5, 30, 35, 40])
+    ax_ref.tick_params(labelsize=8, colors="#64748b")
+    ax_ref.spines[["top","right","left","bottom"]].set_visible(False)
+    ax_ref.grid(axis="x", alpha=.2, linestyle="--")
+    plt.tight_layout(); st.pyplot(fig_ref, use_container_width=True)
+
+
+# ╔══════════════════════════════════════════════════════════╗
+#  DOCTOR — Page 5 : Analyse IA Globale
+# ╚══════════════════════════════════════════════════════════╝
+elif is_doctor and page == DOC_PAGES[4]:
+    st.markdown("""
+    <div class='page-banner banner-doctor'>
+        <div class='banner-eyebrow ey-doctor'>👨‍⚕️ Interface Médecin</div>
+        <div class='banner-h1'>Analyse IA Globale</div>
+        <div class='banner-sub'>Facteurs décisifs du modèle LightGBM · Explicabilité SHAP sur population entière</div>
+        <span class='banner-tag'>SHAP-global</span><span class='banner-tag'>XAI</span>
+    </div>""", unsafe_allow_html=True)
+
+    with st.spinner("Chargement de l'analyse IA…"):
+        (clf,sc_m,fc,acc,f1,prec,rec,cm,cr,Xtes,yte,yp,explainer,shap_values,Xtes_sample) = train_model(BEST_ALGO)
+    n_classes = len(CLASS_NAMES)
+
+    st.markdown(
+        f"<span class='chip chip-teal'>⚡ LightGBM</span>"
+        f"<span class='chip'>Acc {acc*100:.1f}%</span>"
+        f"<span class='chip'>F1 {f1*100:.1f}%</span>"
+        f"<span class='chip chip-violet'>🔍 SHAP global</span>",
+        unsafe_allow_html=True)
+
+    # Global SHAP importance
+    st.markdown("<div class='sec-head'><div class='dot dot-violet'></div>Importance Globale des Variables (SHAP)</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='panel p-violet'>
+        <div class='panel-title'>📖 Lecture du graphique</div>
+        <div class='panel-body'>
+            L'importance SHAP mesure la <strong>contribution moyenne de chaque variable</strong> sur l'ensemble
+            des patients du jeu de test. Plus la barre est longue, plus la variable influence fortement la
+            prédiction d'obésité, toutes classes confondues.
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    fig_imp = plot_global_imp(shap_values, fc, n_classes, "#00d4b4")
+    st.pyplot(fig_imp, use_container_width=True)
+    plt.close(fig_imp)
+
+    # SHAP Beeswarm population
+    st.markdown("<div class='sec-head'><div class='dot dot-violet'></div>Distribution SHAP — Vue Population</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='panel p-violet'>
+        <div class='panel-title'>📖 Lecture du beeswarm</div>
+        <div class='panel-body'>
+            Chaque point = un patient du jeu de test.
+            <span style='color:#ef4444;font-weight:700'>Rouge = valeur haute</span> de la variable,
+            <span style='color:#3b82f6;font-weight:700'>Bleu = valeur basse</span>.
+            Position à droite → augmente le risque · Position à gauche → le réduit.
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # Build beeswarm
+    set_dark_mpl()
+    imp_g = global_shap_imp(shap_values, n_classes)
+    order_g = np.argsort(imp_g)[::-1][:12]
+    sv_mean = np.mean([get_shap_class(shap_values, c) for c in range(n_classes)], axis=0)
+    fig_b, ax_b = plt.subplots(figsize=(11, 7))
+    fig_b.patch.set_facecolor("#0a1628"); ax_b.set_facecolor("#101f38")
+    for rank, fi in enumerate(order_g[::-1]):
+        sv_f  = sv_mean[:, fi]
+        raw_f = Xtes_sample[:, fi]
+        vmin, vmax = raw_f.min(), raw_f.max()
+        norm = (raw_f - vmin) / (vmax - vmin) if vmax > vmin else np.zeros_like(raw_f)
+        colors_b = plt.cm.RdBu_r(norm)
+        jitter = np.random.normal(0, 0.09, size=len(sv_f))
+        ax_b.scatter(sv_f, rank + jitter, c=colors_b, s=16, alpha=.65, linewidths=0)
+    feat_labels_b = [FEATURE_LABELS.get(fc[i], fc[i]) for i in order_g[::-1]]
+    ax_b.set_yticks(range(12)); ax_b.set_yticklabels(feat_labels_b, fontsize=9.5, color="#e2e8f0")
+    ax_b.axvline(0, color="#475569", lw=1.3, linestyle="--")
+    ax_b.set_xlabel("Valeur SHAP (impact sur la prédiction)", fontsize=9, color="#94a3b8")
+    ax_b.set_title("Distribution SHAP — Top 12 variables · Population complète",
+                   fontsize=11, color="#e2e8f0", pad=12, fontweight="600")
+    ax_b.spines[["top","right","left"]].set_visible(False)
+    ax_b.grid(axis="x", alpha=.12, linestyle="--")
+    from matplotlib.cm import ScalarMappable
+    from matplotlib.colors import Normalize
+    sm = ScalarMappable(cmap="RdBu_r", norm=Normalize(0,1))
+    sm.set_array([])
+    cbar = fig_b.colorbar(sm, ax=ax_b, orientation="vertical", fraction=0.015, pad=0.01)
+    cbar.set_label("Valeur\n(bleu=bas · rouge=haut)", fontsize=7.5, color="#64748b")
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#64748b")
+    cbar.outline.set_edgecolor("#2d3a52")
+    plt.tight_layout(); st.pyplot(fig_b, use_container_width=True); plt.close(fig_b)
+
+    # Top insights
+    st.markdown("<div class='sec-head'><div class='dot dot-teal'></div>Insights Clés du Modèle</div>", unsafe_allow_html=True)
+    imp_sorted = np.argsort(imp_g)[::-1]
+    top5 = imp_sorted[:5]
+    INSIGHTS_MAP = {
+        "Weight":  ("⚖️","#ef4444","Le poids est le facteur le plus déterminant. Un IMC élevé est fortement corrélé aux classes obésité III et II."),
+        "Height":  ("📏","#3b82f6","La taille intervient via le calcul de l'IMC — elle module directement la classification diagnostique."),
+        "Age":     ("🎂","#f59e0b","Le vieillissement favorise la prise de poids métabolique et réduit le métabolisme basal."),
+        "FAF":     ("🏃","#22c55e","L'activité physique est un facteur protecteur majeur. 3+ j/sem réduit significativement le risque d'obésité."),
+        "FCVC":    ("🥦","#22c55e","La fréquence de consommation de légumes est inversement corrélée au risque d'obésité."),
+        "CH2O":    ("💧","#06b6d4","Une hydratation insuffisante est associée à un métabolisme ralenti et à une prise de poids."),
+        "CAEC":    ("🍪","#f97316","Le grignotage entre les repas augmente significativement l'apport calorique total quotidien."),
+        "FAVC":    ("🍔","#ef4444","La consommation régulière d'aliments caloriques est un prédicteur fort d'obésité."),
+        "family_history_with_overweight":("🧬","#8b5cf6","La prédisposition génétique multiplie par 2-3 le risque d'obésité — facteur non modifiable."),
+        "NCP":     ("🍽️","#fbbf24","Le nombre de repas par jour influence le cycle métabolique et la régulation de la faim."),
+        "MTRANS":  ("🚗","#64748b","Le mode de transport reflète le niveau d'activité physique quotidienne intégrée."),
+        "SMOKE":   ("🚬","#94a3b8","Le tabagisme perturbe le métabolisme lipidique et peut masquer des problèmes de poids."),
+    }
+    ins_cols = st.columns(min(3, len(top5)))
+    for col_i, fi in zip(ins_cols, top5[:3]):
+        fname = fc[fi]
+        icon, col_c, text = INSIGHTS_MAP.get(fname, ("📌","#94a3b8", f"{FEATURE_LABELS.get(fname,fname)} : variable influente."))
+        with col_i:
+            st.markdown(f"""
+            <div class='shap-insight-card' style='border-color:{col_c}30'>
+                <div class='shap-insight-icon'>{icon}</div>
+                <div>
+                    <div class='shap-insight-title' style='color:{col_c}'>{FEATURE_LABELS.get(fname,fname)}</div>
+                    <div class='shap-insight-text'>{text}</div>
+                    <div style='margin-top:.5rem;font-size:.7rem;font-family:"JetBrains Mono",monospace;color:#334155'>
+                        SHAP moyen : {imp_g[fi]:.4f}
+                    </div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+    ins_cols2 = st.columns(2)
+    for col_i, fi in zip(ins_cols2, top5[3:5]):
+        fname = fc[fi]
+        icon, col_c, text = INSIGHTS_MAP.get(fname, ("📌","#94a3b8", f"{FEATURE_LABELS.get(fname,fname)} : variable influente."))
+        with col_i:
+            st.markdown(f"""
+            <div class='shap-insight-card' style='border-color:{col_c}30'>
+                <div class='shap-insight-icon'>{icon}</div>
+                <div>
+                    <div class='shap-insight-title' style='color:{col_c}'>{FEATURE_LABELS.get(fname,fname)}</div>
+                    <div class='shap-insight-text'>{text}</div>
+                    <div style='margin-top:.5rem;font-size:.7rem;font-family:"JetBrains Mono",monospace;color:#334155'>
+                        SHAP moyen : {imp_g[fi]:.4f}
+                    </div>
+                </div>
+            </div>""", unsafe_allow_html=True)
