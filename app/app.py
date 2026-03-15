@@ -332,18 +332,66 @@ section[data-testid="stSidebar"]::before {
 }
 section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
 section[data-testid="stSidebar"] hr { border-color: rgba(0,212,180,0.10) !important; }
+
+/* ── Radio buttons — clearly highlighted when selected ── */
+section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] {
+    gap: 3px !important;
+    display: flex;
+    flex-direction: column;
+}
 section[data-testid="stSidebar"] .stRadio label {
-    font-size: .82rem !important;
-    padding: .38rem .65rem !important;
-    border-radius: 8px;
+    font-size: .84rem !important;
+    font-weight: 500 !important;
+    padding: .55rem .75rem !important;
+    border-radius: 10px !important;
     margin: 2px 0 !important;
-    transition: all .18s;
+    transition: all .2s ease !important;
     border: 1px solid transparent !important;
     background: transparent !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
 }
 section[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(0,212,180,0.06) !important;
-    border-color: rgba(0,212,180,0.18) !important;
+    background: rgba(0,212,180,0.08) !important;
+    border-color: rgba(0,212,180,0.22) !important;
+    color: #e2e8f0 !important;
+}
+/* Selected state — teal highlight for active item */
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+    background: linear-gradient(135deg,rgba(0,212,180,0.18),rgba(0,180,160,0.10)) !important;
+    border-color: rgba(0,212,180,0.50) !important;
+    color: #00d4b4 !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 12px rgba(0,212,180,0.12) !important;
+}
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) * {
+    color: #00d4b4 !important;
+}
+/* Hide the default circle radio dot */
+section[data-testid="stSidebar"] .stRadio label input[type="radio"] {
+    display: none !important;
+}
+/* Active indicator dot — show before selected label */
+section[data-testid="stSidebar"] .stRadio label:has(input:checked)::before {
+    content: '';
+    display: inline-block !important;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #00d4b4;
+    box-shadow: 0 0 6px #00d4b4;
+    margin-right: .55rem;
+    flex-shrink: 0;
+}
+section[data-testid="stSidebar"] .stRadio label:not(:has(input:checked))::before {
+    content: '';
+    display: inline-block !important;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    margin-right: .55rem;
+    flex-shrink: 0;
 }
 
 .main .block-container {
@@ -1037,12 +1085,13 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
     st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
     st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.3rem'>Rôle</div>",unsafe_allow_html=True)
-    role      = st.radio("role", ROLES, label_visibility="collapsed")
+    role      = st.radio("", ROLES, label_visibility="collapsed")
     is_nurse  = role == ROLES[0]
     is_doctor = not is_nurse
+
     st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
     st.markdown("<div style='font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#334155;margin-bottom:.3rem'>Navigation</div>",unsafe_allow_html=True)
-    page = st.radio("nav", NURSE_PAGES if is_nurse else DOC_PAGES, label_visibility="collapsed")
+    page = st.radio("", NURSE_PAGES if is_nurse else DOC_PAGES, label_visibility="collapsed")
     st.markdown("<hr style='border:none;border-top:1px solid rgba(0,212,180,0.10);margin:.4rem 0'>",unsafe_allow_html=True)
 
     if is_doctor:
